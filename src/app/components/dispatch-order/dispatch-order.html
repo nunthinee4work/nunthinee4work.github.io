@@ -1,0 +1,197 @@
+<form [formGroup]="dispatchForm" (ngSubmit)="onSubmit()">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Generate Payload Dispatch Order ({{ dispatchForm.value.orderFlow }})</h1>
+    <button type="button" class="btn btn-outline-primary" (click)="openModal()">Show Tote Codes</button>
+  </div>
+
+  <div class="form-group mb-3 mt-3">
+    <label for="orderFlow" class="text-red text-xl" style="font-size: 25px;">Order Flow :</label>
+    <ng-select [items]="orderFlows" bindLabel="name" bindValue="id" placeholder="Select mode"
+      formControlName="orderFlow" class="custom-ng-select">
+    </ng-select>
+  </div>
+
+  <div class="form-group mb-3 mt-3">
+    <label for="mode" class="text-red text-xl" style="font-size: 25px;">Mode :</label>
+    <ng-select [items]="modes" bindLabel="name" bindValue="id" placeholder="Select mode" formControlName="mode"
+      class="custom-ng-select" (change)="onChangedMode()">
+    </ng-select>
+  </div>
+
+  <p><b>Step1:</b> Go to mongodb collection <b>order.delivery_orders</b> then right click at your document and select
+    copy > <b>Copy Value as Plain Text</b></p>
+  <p><b>Step2:</b> Paste your Delivery Order here</p>
+  <div class="textarea-content">
+    <textarea formControlName="deliveryOrder" (input)="onChangedInputDelivery()"></textarea>
+  </div>
+
+  <hr class="mt-4">
+
+  <div *ngIf="dispatchForm.value.mode === 'SINGLE_TOTE'">
+    <div class="form-group">
+      <label for="toteId">ToteId:</label>
+      <input type="text" id="toteId" formControlName="toteId" placeholder="Enter ToteId"
+        [class.is-invalid]="dispatchForm.get('toteId')?.invalid && dispatchForm.get('toteId')?.touched">
+      <small class="form-text text-muted ms-2">เช่น TB990001</small>
+    </div>
+  </div>
+
+  <div *ngIf="dispatchForm.value.mode === 'RANDOM_TOTE'">
+    <h3></h3>
+    <div class="form-group">
+      <label for="subfixToteCode">Subfix Tote Code:</label>
+      <input type="text" id="subfixToteCode" formControlName="subfixToteCode" placeholder="Enter Tote Code"
+        [class.is-invalid]="dispatchForm.get('subfixToteCode')?.invalid && dispatchForm.get('subfixToteCode')?.touched">
+      <small class="form-text text-muted" style="margin-left: 10px;">เลขก่อน running number จะใส่หรือไม่ใส่ก็ได้ เช่น
+        9999 -> TB9999xxxx (xxxx คือ running number)</small>
+    </div>
+
+    <div class="form-group">
+      <label for="startRunningNumber">Start Running Number:</label>
+      <input type="number" id="startRunningNumber" formControlName="startRunningNumber"
+        placeholder="Enter Start Running Number"
+        [class.is-invalid]="dispatchForm.get('startRunningNumber')?.invalid && dispatchForm.get('startRunningNumber')?.touched">
+      <small class="form-text text-muted" style="margin-left: 10px;">เช่น 1 จะได้ 0001 , 0002 ... n จะ generate tote Id
+        ตั้งแต่ 1 - n (ตามจำนวน items ใน do)</small>
+    </div>
+  </div>
+
+  <div *ngIf="items.value.length > 0">
+    <h3>Tote Details</h3>
+    <form [formGroup]="toteForm">
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th class="text-center">Product Name</th>
+            <th class="text-center">Barcode</th>
+            <th class="text-center">Assigned Qty</th>
+            <th class="text-center">Unit</th>
+            <th class="text-center">Pick Details</th>
+          </tr>
+        </thead>
+        <tbody formArrayName="items">
+          <tr *ngFor="let item of items.controls; let i = index" [formGroupName]="i">
+            <td>{{ item.get('productName')?.value }}</td>
+            <td>{{ item.get('barcode')?.value }}</td>
+            <td class="text-center">
+              <strong>{{ item.get('assignedQty')?.value }}</strong> ({{ item.get('assignedQty')?.value *
+              item.get('unitFactor')?.value }} PC)
+            </td>
+            <td class="text-center">{{ item.get('unit')?.value }}</td>
+            <td>
+              <table class="table table-sm table-borderless" formArrayName="details">
+                <tr *ngFor="let d of getDetails(i).controls; let j = index" [formGroupName]="j" class="pick-detail-row">
+                  <td colspan="3">
+                    <div class="row">
+                      <div class="col-4">
+                        <input type="text" class="form-control" formControlName="pickQty" placeholder="Pick Qty"
+                          [class.is-invalid]="d.get('pickQty')?.invalid && d.get('pickQty')?.touched">
+                      </div>
+                      <div class="col-7">
+                        <input type="text" class="form-control" formControlName="toteId" placeholder="Tote ID"
+                          [class.is-invalid]="d.get('toteId')?.invalid && d.get('toteId')?.touched">
+                      </div>
+                      <div class="col-1">
+                        <button type="button" class="btn btn-danger btn-sm" (click)="removeDetail(i, j)">–</button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="3">
+                    <button type="button" class="btn btn-primary btn-sm"
+                      style="border: 1px solid #0d6efd !important; padding: 0.25rem 0.75rem;" (click)="addDetail(i)">
+                      + Split Tote
+                    </button>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </form>
+  </div>
+
+  <h3>Fill in Shipment information</h3>
+  <div class="form-group">
+    <label for="platNo">Plat No:</label>
+    <input type="text" id="platNo" formControlName="platNo" placeholder="Enter PlatNo"
+      [class.is-invalid]="dispatchForm.get('platNo')?.invalid && dispatchForm.get('platNo')?.touched">
+  </div>
+
+  <div class="form-group">
+    <label for="driverName">Driver Name:</label>
+    <input type="text" id="driverName" formControlName="driverName" placeholder="Enter DriverName"
+      [class.is-invalid]="dispatchForm.get('driverName')?.invalid && dispatchForm.get('driverName')?.touched">
+  </div>
+
+  <div class="form-group">
+    <label for="priceDate">Price Date:</label>
+    <input type="text" id="priceDate" formControlName="priceDate" placeholder="YYYY-MM-DD"
+      [class.is-invalid]="dispatchForm.get('priceDate')?.invalid && dispatchForm.get('priceDate')?.touched">
+    <small class="form-text text-muted ms-2">ดึงข้อมูลจาก stock.external_prices โดยใช้ barcode และเลือกรายการที่มี
+      createdDate ล่าสุด (มีผลกับทุก item อาจจะต้องไปแก้ไขเพิ่มเองในภายหลัง)</small>
+  </div>
+
+  <div>
+    <button type="button" class="btn btn-secondary me-2" (click)="onPreview()"
+      [disabled]="dispatchForm.value.mode === 'CUSTOM_TOTE'">
+      Preview</button>
+    <button type="button" class="btn btn-primary me-2" (click)="onSubmit()">
+      {{dispatchForm.get('orderFlow')?.value ==
+      'KEEP_STOCK' ? 'Generate Payload' : 'Export CSV'}}</button>
+    <button type="button" class="btn btn-danger" (click)="clearData()">Clear</button>
+  </div>
+
+  <hr class="mt-5">
+</form>
+
+<div *ngIf="confirmToteData">
+  <h3>
+    Payload Confirm Tote Output:
+    <button class="copy-button" (click)="copyToClipboard(confirmToteOutput, copyConfirmToteOutput)"
+      #copyConfirmToteOutput>
+      <i class="fa-regular fa-copy"></i> Copy
+    </button>
+  </h3>
+  <pre #confirmToteOutput class="json-output">{{ confirmToteData | json }}</pre>
+</div>
+
+<div *ngIf="confirmShipmentData">
+  <h3>
+    Payload Confirm Shipment Output:
+    <button class="copy-button" (click)="copyToClipboard(confirmShipmentOutput, copyConfirmShipmentOutput)"
+      #copyConfirmShipmentOutput>
+      <i class="fa-regular fa-copy"></i> Copy
+    </button>
+  </h3>
+  <pre #confirmShipmentOutput class="json-output">{{ confirmShipmentData | json }}</pre>
+</div>
+
+<div class="modal fade" id="totePreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">รายการ Tote</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered table-striped">
+          <thead>
+            <tr>
+              <th>Tote Code</th>
+              <th>Tote Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tote of prefixToteList">
+              <td>{{ tote.code }}</td>
+              <td>{{ tote.nameTh }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,21 +1,15 @@
-<div id="centerToast"></div>
-
-<div class="tabs">
-  <div
-    class="tab"
-    *ngFor="let tab of tabs"
-    [class.active]="activeTab === tab.id"
-    (click)="openTab(tab.id)"
-  >
-    {{ tab.label }}
+<div class="p-4">
+  <div class="tabs">
+    <div class="tab" *ngFor="let tab of tabs" [class.active]="activeTab === tab.id" (click)="openTab(tab.id)">
+      {{ tab.label }}
+    </div>
   </div>
-</div>
 
-<div class="tab-content active">
-  <div id="content-area">
-    <ng-container [ngSwitch]="activeTab">
-      <app-dispatch-order-keep-stock *ngSwitchCase="'dispatchOrderKeepStock'"></app-dispatch-order-keep-stock>
-      <app-dispatch-order-cross-dock *ngSwitchCase="'dispatchOrderCrossDock'"></app-dispatch-order-cross-dock>
-    </ng-container>
+  <div class="tab-content active">
+    <div id="content-area">
+      <ng-container [ngSwitch]="activeTab">
+        <app-dispatch-order *ngSwitchCase="'dispatchOrder'"></app-dispatch-order>
+      </ng-container>
+    </div>
   </div>
 </div>

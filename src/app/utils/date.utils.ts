@@ -1,6 +1,5 @@
 export class DateUtils {
   generateDateTimeTDSC(date?: Date | string): string {
-    console.log(date)
     const now = date ? new Date(date) : new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -33,5 +32,17 @@ export class DateUtils {
     const seconds = pad(now.getSeconds());
 
     return `${year}${month}${day}${hours}${minutes}${seconds}`;
+  }
+
+  generateDateTime(date?: string | Date): string {
+    const now = date ? new Date(date) : new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }
 }
