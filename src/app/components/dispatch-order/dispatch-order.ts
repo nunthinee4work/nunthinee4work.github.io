@@ -134,6 +134,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   ) { }
 
   ngOnInit(): void {
+    this.prefixToteList = this.prefixToteList.slice().sort((a, b) => +a.toteGroup - +b.toteGroup)
+
     const now = new Date()
     this.dispatchForm = this.fb.group({
       deliveryOrder: ['', Validators.required],
