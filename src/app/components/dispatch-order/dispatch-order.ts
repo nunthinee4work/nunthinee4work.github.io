@@ -661,7 +661,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     const driverName = dispatchFormData.driverName
     const now = new Date();
     const mode = dispatchFormData.mode
-    const shipmentTime = this.dateUtils.generateDate(now)
+    const shipmentTime = this.dateUtils.generateCompactDateTime(now)
 
     const customToteItems: any[] = this.items.value
     const itemCount = this.getTotalSizeFromDeliveryOrders()
