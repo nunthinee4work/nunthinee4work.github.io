@@ -22,7 +22,6 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   toteForm!: FormGroup;
   dateUtils: DateUtils = new DateUtils()
   toteIdList: string[] = [];
-  deliveryOrderObject: any
   modal: any;
   confirmToteData: any
   confirmShipmentData: any
@@ -138,7 +137,11 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
     const now = new Date()
     this.dispatchForm = this.fb.group({
-      deliveryOrder: ['', Validators.required],
+      deliveryOrders: this.fb.array([
+        this.fb.group({
+          value: ['', Validators.required]
+        })
+      ]),
       mode: [null, Validators.required],
       orderFlow: [null, Validators.required],
       subfixToteCode: [''],
@@ -185,12 +188,55 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     }
   }
 
-  openModal() {
-    this.modal?.show();
+  get deliveryOrders(): FormArray {
+    return this.dispatchForm.get('deliveryOrders') as FormArray;
   }
 
   get items(): FormArray {
     return this.toteForm.get('items') as FormArray;
+  }
+
+  openModal() {
+    this.modal?.show();
+  }
+
+  addDeliveryOrder() {
+    this.deliveryOrders.push(this.fb.group({
+      value: ['', Validators.required]
+    }));
+  }
+
+  removeDeliveryOrder(index: number) {
+    this.deliveryOrders.removeAt(index);
+    this.mapToteDetail()
+  }
+
+  getInputDeliveryOrderList(): any[] {
+    return (this.dispatchForm.get('deliveryOrders') as FormArray)
+      .controls
+      .map(control => {
+        const jsonString = control.get('value')?.value ?? '';
+        try {
+          return JSON.parse(jsonString);
+        } catch (e) {
+          console.error('Invalid JSON:', jsonString);
+          return null;
+        }
+      })
+      .filter(item => item !== null)
+  }
+
+  onChangedInputDelivery(index: number) {
+    this.mapToteDetail()
+  }
+
+  onChangedOrderFlow(): void {
+    this.deliveryOrders.clear()
+    this.deliveryOrders.push(
+      this.fb.group({
+        value: ['', Validators.required]
+      })
+    )
   }
 
   createItemForm(product: any): FormGroup {
@@ -203,7 +249,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     });
   }
 
-  createItem(productName: string, articleNo: string, barcode: string, assignedQty: number, unit: string, toteId: string, unitFactor?: number): FormGroup {
+  createItem(productName: string, articleNo: string, barcode: string, assignedQty: number, unit: string, toteId: string, unitFactor?: number,
+    doNo?: string, deliveryDate?: string, pickDate?: string, poNo?: string, shipmentNo?: string, orderType?: string): FormGroup {
     return this.fb.group({
       productName: [productName],
       articleNo: [articleNo],
@@ -211,6 +258,12 @@ export class DispatchOrder implements OnInit, AfterViewInit {
       assignedQty: [assignedQty],
       unit: [unit],
       unitFactor: [unitFactor],
+      doNo: [doNo],
+      deliveryDate: [deliveryDate],
+      pickDate: [pickDate],
+      poNo: [poNo],
+      shipmentNo: [shipmentNo],
+      orderType: [orderType],
       details: this.fb.array([this.createDetail(assignedQty, toteId)])
     });
   }
@@ -231,50 +284,56 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     this.mapToteDetail()
   }
 
-  onChangedInputDelivery(): void {
-    const inputDeliveryOrderString = this.dispatchForm.get('deliveryOrder')?.value ?? '';
-
-    try {
-      this.deliveryOrderObject = JSON.parse(inputDeliveryOrderString);
-    } catch (e) {
-      if (inputDeliveryOrderString) {
-        this.toastr.error('JSON parse error:');
-      }
-      this.deliveryOrderObject = null;
-    }
-
-    this.mapToteDetail()
-  }
-
   mapToteDetail(): void {
+    console.log('come')
     const mode = this.dispatchForm.get('mode')?.value ?? ''
     const orderFlow = this.dispatchForm.get('orderFlow')?.value ?? ''
-    if (mode != 'CUSTOM_TOTE') {
+    if (mode != 'CUSTOM_TOTE' && this.items.length == 0) {
       return;
     }
 
-    if (this.deliveryOrderObject && Array.isArray(this.deliveryOrderObject.items)) {
-      const items = this.deliveryOrderObject.items;
-      this.items.clear();
+    const inputDeliveryOrders = this.getInputDeliveryOrderList()
+    const deliveryItemSize = this.getTotalSizeFromDeliveryOrders()
+    this.items.clear()
 
-      if (items && Array.isArray(items)) {
-        items.forEach(item => {
-          this.items.push(
-            this.createItem(
-              item.productName ?? '',
-              item.articleNo ?? '',
-              item.barcode ?? '',
-              orderFlow == 'KEEP_STOCK' ? item.qty : item.assignedQty ?? 0, //TODO
-              orderFlow == 'KEEP_STOCK' ? item.unit : item.crossDock?.unit ?? '', //TODO
-              '',
-              item.unitFactor ?? 0
-            )
-          );
-        });
+    inputDeliveryOrders.forEach((deliveryOrder: any) => {
+      if (deliveryOrder && Array.isArray(deliveryOrder.items)) {
+        const items = deliveryOrder.items;
+        const doNo = deliveryOrder.doNo
+        const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
+        const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.pickDate))
+        const isKeepStock = orderFlow == 'KEEP_STOCK'
+
+        if (mode == 'RANDOM_TOTE') {
+          this.generateToteIdList(deliveryItemSize)
+        }
+
+        if (items && Array.isArray(items)) {
+          items.forEach((item: any, index: number) => {
+            const toteId = mode == 'RANDOM_TOTE' ? this.toteIdList[index] : (mode == 'SINGLE_TOTE' ? this.dispatchForm.get('toteId')?.value : '')
+            this.items.push(
+              this.createItem(
+                item.productName ?? '',
+                item.articleNo ?? '',
+                item.barcode ?? '',
+                isKeepStock ? item.qty : item.assignedQty ?? 0, //TODO
+                isKeepStock ? item.unit : item.crossDock?.unit ?? '', //TODO
+                toteId,
+                item.unitFactor ?? 0,
+                doNo,
+                deliveryDate,
+                pickDate,
+                isKeepStock ? deliveryOrder.po.poNo : '',
+                isKeepStock ? deliveryOrder.shipment.shipmentNo : '',
+                isKeepStock ? deliveryOrder.po.orderType : '',
+              )
+            );
+          });
+        }
+      } else {
+        console.warn('Invalid delivery order or items missing');
       }
-    } else {
-      console.warn('Invalid delivery order or items missing');
-    }
+    })
   }
 
   getDetails(index: number): FormArray {
@@ -313,29 +372,19 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     const dispatchValue = this.dispatchForm.value
     const orderFlow = dispatchValue.orderFlow
 
-    const now = new Date();
-    const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(this.deliveryOrderObject.po.cutOffDeliveryDate));
-    const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(this.deliveryOrderObject.po.pickDate));
-    const currentDate = now.toISOString().split('T')[0]
-    const expDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
+    const platNo = dispatchValue.platNo
+    const driverName = dispatchValue.driverName
+    const priceDate = dispatchValue.priceDate
 
-    const plateNo = this.dispatchForm.get('platNo')?.value ?? '';
-    const driverName = this.dispatchForm.get('driverName')?.value ?? '';
-    const priceDate = this.dispatchForm.get('priceDate')?.value ?? '';
-
-    if (!this.deliveryOrderObject?.items || !Array.isArray(this.deliveryOrderObject.items)) {
+    if (this.getTotalSizeFromDeliveryOrders() == 0) {
       this.toastr.error('Invalid deliveryOrder structure: missing items array', 'แจ้งเตือน');
       return;
     }
 
     if (orderFlow == 'CROSS_DOCK') {
-      this.generateDispatchCrossDock(this.deliveryOrderObject.doNo, deliveryDate, pickDate, driverName, plateNo, priceDate, expDate, currentDate);
+      this.generateDispatchCrossDock(driverName, platNo, priceDate)
     } else {
-      // this.confirmTote()
       this.generateDispatcKeepStock()
-
-      console.log(this.confirmToteData)
-      console.log(this.confirmShipmentData)
     }
   }
 
@@ -375,21 +424,30 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     ]
   }
 
-  buildCSVData(doNo: string,
-    deliveryDate: string,
-    pickDate: string,
+  getTotalSizeFromDeliveryOrders(): number {
+    let size = 0;
+    const deliveryOrders = this.getInputDeliveryOrderList()
+    for (let i = 0; i < deliveryOrders.length; i++) {
+      size += deliveryOrders[i].items.length
+    }
+    return size
+  }
+
+  buildCSVData(
     driverName: string,
     plateNo: string,
-    priceDate: string,
-    expDate: string,
-    currentDate: string): any[] {
+    priceDate: string): any[] {
 
     const rows: (string | number)[][] = [];
     const customToteItems: any[] = this.items.value
     const itemCount = customToteItems.length
     const dispatchFormData = this.dispatchForm.value
-    const mode = dispatchFormData.value
-    const deliveryOrderItems: any[] = this.deliveryOrderObject.items
+    const mode = dispatchFormData.mode
+
+    const inputDeliveryOrders = this.getInputDeliveryOrderList()
+    const now = new Date()
+    const currentDate = now.toISOString().split('T')[0]
+    const expDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
 
     if (mode == 'CUSTOM_TOTE' || itemCount > 0) {
       for (let i = 0; i < itemCount; i++) {
@@ -398,13 +456,13 @@ export class DispatchOrder implements OnInit, AfterViewInit {
         if (doItem.details) {
           for (let j = 0; j < doItem.details.length; j++) {
             const item = doItem.details[j]
-            rows.push(this.mapRowCsv(doNo,
+            rows.push(this.mapRowCsv(doItem.doNo,
               doItem.barcode,
               item.pickQty,
               item.unit,
               item.toteId,
-              deliveryDate,
-              pickDate,
+              doItem.deliveryDate,
+              doItem.pickDate,
               driverName,
               plateNo,
               priceDate,
@@ -414,91 +472,100 @@ export class DispatchOrder implements OnInit, AfterViewInit {
           }
         }
       }
-    }
-    else if (mode == 'RANDOM_TOTE') {
-      this.generateToteIdList(deliveryOrderItems.length)
-
-      if (deliveryOrderItems.length > 0) {
-        this.items.clear();
-
-        deliveryOrderItems.forEach((item, index) => {
-          const toteId = this.toteIdList[index]
-          this.items.push(
-            this.createItem(
-              item.productName ?? '',
-              item.articleNo ?? '',
-              item.barcode ?? '',
-              item.assignedQty ?? 0,
-              item.crossDock.unit ?? '',
-              toteId,
-              item.unitFactor ?? 0
-            )
-          );
-
-          rows.push(this.mapRowCsv(doNo,
-            item.barcode,
-            item.assignedQty,
-            item.crossDock.unit,
-            toteId,
-            deliveryDate,
-            pickDate,
-            driverName,
-            plateNo,
-            priceDate,
-            expDate,
-            currentDate
-          ));
-        });
-      }
     } else {
-      const toteId: string = dispatchFormData.toteId;
-      const rows: (string | number)[][] = [];
-
-      if (deliveryOrderItems.length > 0) {
-        this.items.clear();
-
-        deliveryOrderItems.forEach((item) => {
-          console.log(item)
-          this.items.push(
-            this.createItem(
-              item.productName ?? '',
-              item.articleNo ?? '',
-              item.barcode ?? '',
-              item.assignedQty ?? 0,
-              item.crossDock.unit ?? '',
-              toteId,
-              item.unitFactor ?? 0
-            )
-          );
-
-          rows.push(this.mapRowCsv(doNo,
-            item.barcode,
-            item.assignedQty,
-            item.crossDock.unit,
-            toteId,
-            deliveryDate,
-            pickDate,
-            driverName,
-            plateNo,
-            priceDate,
-            expDate,
-            currentDate
-          ));
-        });
+      const itemSize = this.getTotalSizeFromDeliveryOrders()
+      if (itemSize > 0) {
+        this.items.clear()
       }
+
+      let index = 0
+
+      inputDeliveryOrders.forEach((deliveryOrder: any) => {
+        const doNo = deliveryOrder.doNo
+        const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
+        const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.pickDate))
+
+        if (mode == 'RANDOM_TOTE') {
+          this.generateToteIdList(itemSize)
+
+          deliveryOrder.items.forEach((item: any) => {
+            const toteId = this.toteIdList[index]
+            this.items.push(
+              this.createItem(
+                item.productName ?? '',
+                item.articleNo ?? '',
+                item.barcode ?? '',
+                item.assignedQty ?? 0,
+                item.crossDock.unit ?? '',
+                toteId,
+                item.unitFactor ?? 0,
+                doNo,
+                deliveryDate,
+                pickDate
+              )
+            )
+
+            rows.push(this.mapRowCsv(doNo,
+              item.barcode,
+              item.assignedQty,
+              item.crossDock.unit,
+              toteId,
+              deliveryDate,
+              pickDate,
+              driverName,
+              plateNo,
+              priceDate,
+              expDate,
+              currentDate
+            ))
+
+            index++
+          });
+        }
+        else {
+          const toteId: string = dispatchFormData.toteId;
+
+          deliveryOrder.items.forEach((item: any) => {
+            this.items.push(
+              this.createItem(
+                item.productName ?? '',
+                item.articleNo ?? '',
+                item.barcode ?? '',
+                item.assignedQty ?? 0,
+                item.crossDock.unit ?? '',
+                toteId,
+                item.unitFactor ?? 0,
+                doNo,
+                deliveryDate,
+                pickDate
+              )
+            );
+
+            rows.push(this.mapRowCsv(doNo,
+              item.barcode,
+              item.assignedQty,
+              item.crossDock.unit,
+              toteId,
+              deliveryDate,
+              pickDate,
+              driverName,
+              plateNo,
+              priceDate,
+              expDate,
+              currentDate
+            ))
+          })
+        }
+      })
     }
 
     return rows;
   }
 
-  generateDispatchCrossDock(doNo: string,
-    deliveryDate: string,
-    pickDate: string,
+  generateDispatchCrossDock(
     driverName: string,
     plateNo: string,
-    priceDate: string,
-    expDate: string,
-    currentDate: string): void {
+    priceDate: string): void {
     const headers: string[] = [
       "01", "shipmentNo", "doNo", "barcode", "pickedQty", "uom", "toteId", "deliverydate",
       "pickupdate", "couriercode", "couriername", "drivername", "truckId", "plateno",
@@ -506,7 +573,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     ];
 
     const rows: (string | number)[][] = [];
-    rows.push(...this.buildCSVData(doNo, deliveryDate, pickDate, driverName, plateNo, priceDate, expDate, currentDate));
+    rows.push(...this.buildCSVData(driverName, plateNo, priceDate));
 
     const csvArray = [headers, ...rows];
 
@@ -521,11 +588,12 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
     const BOM = "\uFEFF";
 
+    const deliveryOrder = this.getInputDeliveryOrderList()[0]
     const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `shipment_${this.deliveryOrderObject.doNo}.csv`;
+    link.download = `shipment_${deliveryOrder.po.storeCode}_${this.dateUtils.generateCompactDateTime(new Date())}.csv`;
     link.click();
   }
 
@@ -533,11 +601,12 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     if (this.validateForm()) {
       return;
     }
+    const itemCount = this.getTotalSizeFromDeliveryOrders()
 
-    if (this.deliveryOrderObject && Array.isArray(this.deliveryOrderObject.items)) {
-      const deliveryOrderItems = this.deliveryOrderObject.items;
+    if (itemCount > 0) {
       this.items.clear();
 
+      const deliveryOrders = this.getInputDeliveryOrderList()
       const dispatchFormData = this.dispatchForm.value
       const subfixToteCode: string = dispatchFormData.subfixToteCode;
       const runningRandomStart: number = dispatchFormData.startRunningNumber;
@@ -547,15 +616,19 @@ export class DispatchOrder implements OnInit, AfterViewInit {
       this.toteIdList = []
 
       if (mode == 'RANDOM_TOTE') {
-        for (let i = 0; i < deliveryOrderItems.length; i++) {
+        for (let i = 0; i < itemCount; i++) {
           const randomIndex = Math.floor(Math.random() * this.prefixToteList.length);
           let toteId = `${this.prefixToteList[randomIndex].code}${subfixToteCode}${String(runningRandomStart + i).padStart(4, '0')}`;
           this.toteIdList.push(toteId);
         }
       }
 
-      if (deliveryOrderItems && Array.isArray(deliveryOrderItems)) {
-        deliveryOrderItems.forEach((item, index) => {
+      deliveryOrders.forEach((deliveryOrder: any) => {
+        const doNo = deliveryOrder.doNo
+        const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
+        const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.pickDate))
+
+        deliveryOrder.items.forEach((item: any, index: number) => {
           this.items.push(
             this.createItem(
               item.productName ?? '',
@@ -564,40 +637,44 @@ export class DispatchOrder implements OnInit, AfterViewInit {
               orderFlow == 'CROSS_DOCK' ? item.assignedQty : item.qty,
               orderFlow == 'CROSS_DOCK' ? item.crossDock.unit : item.unit,
               mode == 'RANDOM_TOTE' ? this.toteIdList[index] : toteId,
-              item.unitFactor ?? 0
+              item.unitFactor ?? 0,
+              doNo,
+              deliveryDate,
+              pickDate
             )
           );
         });
-      }
+      })
     } else {
       console.warn('Invalid delivery order or items missing');
     }
   }
 
   generateDispatcKeepStock(): void {
-    const confirmShipmentDetails = [];
-    const confirmToteDetails = [];
-    const deliveryOrderItems = this.deliveryOrderObject.items
+    const confirmShipmentDetails: any[] = []
+    const confirmToteDetails: any[] = []
+    const confirmShipments: any[] = []
+    const confirmTotes: any[] = []
+    const deliveryOrders = this.getInputDeliveryOrderList()
     const dispatchFormData = this.dispatchForm.value
     const platNo = dispatchFormData.platNo
     const driverName = dispatchFormData.driverName
     const now = new Date();
     const mode = dispatchFormData.mode
+    const shipmentTime = this.dateUtils.generateDate(now)
 
     const customToteItems: any[] = this.items.value
-    const itemCount = customToteItems.length
+    const itemCount = this.getTotalSizeFromDeliveryOrders()
 
-    if (mode == 'CUSTOM_TOTE' || itemCount > 0) {
-      for (let i = 0; i < itemCount; i++) {
-        const doItem = customToteItems[i]
-
+    if (mode == 'CUSTOM_TOTE' || customToteItems.length > 0) {
+      customToteItems.forEach((doItem: any, index: number) => {
         if (doItem.details) {
           for (let j = 0; j < doItem.details.length; j++) {
             const customItem = doItem.details[j]
 
             confirmToteDetails.push(
               this.createConfirmToteDetail(
-                this.deliveryOrderObject.doNo,
+                doItem.doNo,
                 doItem.articleNo,
                 customItem.toteId,
                 customItem.pickQty,
@@ -607,8 +684,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
             confirmShipmentDetails.push(
               this.createConfirmShipmentDetail(
-                this.deliveryOrderObject.doNo,
-                i + 1,
+                doItem.doNo,
+                index + 1,
                 doItem.articleNo,
                 customItem.pickQty,
                 doItem.unitFactor,
@@ -616,115 +693,138 @@ export class DispatchOrder implements OnInit, AfterViewInit {
               )
             );
           }
+
+          const isDuplicatConfirmShipment = confirmShipments.some(cs => cs.docNo === doItem.doNo)
+          const isDuplicatConfirmTote = confirmShipments.some(cs => cs.docNo === doItem.doNo)
+
+          if (!isDuplicatConfirmShipment) {
+            confirmShipments.push(this.buildConfirmShipmentData(doItem.orderType, doItem.doNo, doItem.poNo, doItem.shipmentNo, shipmentTime, platNo, driverName, confirmShipmentDetails))
+          }
+
+          if (!isDuplicatConfirmTote) {
+            confirmTotes.push(this.buildConfirmToteData(doItem.orderType, doItem.doNo, doItem.poNo, doItem.shipmentNo, confirmToteDetails))
+          }
+        }
+      })
+    } else {
+      if (mode == 'RANDOM_TOTE') {
+        this.generateToteIdList(itemCount)
+        if (itemCount > 0) {
+          this.items.clear()
+
+          deliveryOrders.forEach((deliveryOrder: any) => {
+            const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
+            const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.pickDate))
+
+            deliveryOrder.items.forEach((item: any, index: number) => {
+              const toteId = this.toteIdList[index]
+
+              this.items.push(
+                this.createItem(
+                  item.productName ?? '',
+                  item.articleNo ?? '',
+                  item.barcode ?? '',
+                  item.qty ?? 0,
+                  item.unit ?? '',
+                  toteId,
+                  item.unitFactor ?? 0,
+                  deliveryOrder.doNo,
+                  deliveryDate,
+                  pickDate,
+                  deliveryOrder.po.poNo,
+                  deliveryOrder.shipment.shipmentNo,
+                  deliveryOrder.po.orderType
+                )
+              )
+
+              confirmToteDetails.push(
+                this.createConfirmToteDetail(
+                  deliveryOrder.doNo,
+                  item.articleNo,
+                  toteId,
+                  item.qty,
+                  item.unitFactor
+                )
+              )
+
+              confirmShipmentDetails.push(
+                this.createConfirmShipmentDetail(
+                  deliveryOrder.doNo,
+                  index + 1,
+                  item.articleNo,
+                  item.qty,
+                  item.unitFactor,
+                  this.dateUtils.generateDate(now)
+                )
+              )
+            })
+            confirmShipments.push(this.buildConfirmShipmentData(deliveryOrder.po.orderType, deliveryOrder.doNo, deliveryOrder.po.poNo, deliveryOrder.shipment.shipmentNo, shipmentTime, platNo, driverName, confirmShipmentDetails))
+            confirmTotes.push(this.buildConfirmToteData(deliveryOrder.po.orderType, deliveryOrder.doNo, deliveryOrder.po.poNo, deliveryOrder.shipment.shipmentNo, confirmToteDetails))
+          })
         }
       }
-    }
-    else if (mode == 'RANDOM_TOTE') {
-      this.generateToteIdList(deliveryOrderItems.length)
-      if (deliveryOrderItems.length > 0) {
-        this.items.clear();
+      else {
+        const toteId: string = dispatchFormData.toteId;
 
-        deliveryOrderItems.forEach((item: any, index: number) => {
-          const toteId = this.toteIdList[index]
+        if (itemCount > 0) {
+          this.items.clear()
 
-          this.items.push(
-            this.createItem(
-              item.productName ?? '',
-              item.articleNo ?? '',
-              item.barcode ?? '',
-              item.qty ?? 0,
-              item.unit ?? '',
-              toteId,
-              item.unitFactor ?? 0
-            )
-          );
+          deliveryOrders.forEach((deliveryOrder: any) => {
+            const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
+            const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.pickDate))
 
-          confirmToteDetails.push(
-            this.createConfirmToteDetail(
-              this.deliveryOrderObject.doNo,
-              item.articleNo,
-              toteId,
-              item.qty,
-              item.unitFactor
-            )
-          );
+            deliveryOrder.items.forEach((item: any, index: number) => {
+              this.items.push(
+                this.createItem(
+                  item.productName ?? '',
+                  item.articleNo ?? '',
+                  item.barcode ?? '',
+                  item.qty ?? 0,
+                  item.unit ?? '',
+                  toteId,
+                  item.unitFactor ?? 0,
+                  deliveryOrder.doNo,
+                  deliveryDate,
+                  pickDate,
+                  deliveryOrder.po.poNo,
+                  deliveryOrder.shipment.shipmentNo,
+                  deliveryOrder.po.orderType
+                )
+              )
 
-          confirmShipmentDetails.push(
-            this.createConfirmShipmentDetail(
-              this.deliveryOrderObject.doNo,
-              index + 1,
-              item.articleNo,
-              item.qty,
-              item.unitFactor,
-              this.dateUtils.generateDate(now)
-            )
-          );
-        });
-      }
-    }
-    else {
-      const toteId: string = dispatchFormData.toteId;
-      const rows: (string | number)[][] = [];
+              confirmToteDetails.push(
+                this.createConfirmToteDetail(
+                  deliveryOrder.doNo,
+                  item.articleNo,
+                  toteId,
+                  item.qty,
+                  item.unitFactor
+                )
+              );
 
-      if (deliveryOrderItems.length > 0) {
-        this.items.clear();
+              confirmShipmentDetails.push(
+                this.createConfirmShipmentDetail(
+                  deliveryOrder.doNo,
+                  index + 1,
+                  item.articleNo,
+                  item.qty,
+                  item.unitFactor,
+                  this.dateUtils.generateDate(now)
+                )
+              )
+            })
 
-        deliveryOrderItems.forEach((item: any, index: number) => {
-          this.items.push(
-            this.createItem(
-              item.productName ?? '',
-              item.articleNo ?? '',
-              item.barcode ?? '',
-              item.qty ?? 0,
-              item.unit ?? '',
-              toteId,
-              item.unitFactor ?? 0
-            )
-          );
-
-          confirmToteDetails.push(
-            this.createConfirmToteDetail(
-              this.deliveryOrderObject.doNo,
-              item.articleNo,
-              toteId,
-              item.qty,
-              item.unitFactor
-            )
-          );
-
-          confirmShipmentDetails.push(
-            this.createConfirmShipmentDetail(
-              this.deliveryOrderObject.doNo,
-              index + 1,
-              item.articleNo,
-              item.qty,
-              item.unitFactor,
-              this.dateUtils.generateDate(now)
-            )
-          );
-        });
+            confirmShipments.push(this.buildConfirmShipmentData(deliveryOrder.po.orderType, deliveryOrder.doNo, deliveryOrder.po.poNo, deliveryOrder.shipment.shipmentNo, shipmentTime, platNo, driverName, confirmShipmentDetails))
+            confirmTotes.push(this.buildConfirmToteData(deliveryOrder.po.orderType, deliveryOrder.doNo, deliveryOrder.po.poNo, deliveryOrder.shipment.shipmentNo, confirmToteDetails))
+          })
+        }
       }
     }
 
     this.confirmShipmentData = {
       "xmldata": {
         "data": {
-          "orderinfo": [
-            {
-              "warehouseId": "TDNE-01",
-              "orderType": this.deliveryOrderObject.po.orderType,
-              "customerId": "TD001",
-              "docNo": this.deliveryOrderObject.doNo,
-              "soReferenceA": this.deliveryOrderObject.po.poNo,
-              "soReferenceB": this.deliveryOrderObject.shipment.shipmentNo,
-              "deliveryNo": this.deliveryOrderObject.doNo,
-              "carrierId": "210000263",
-              "shippedTime": this.dateUtils.generateDateTime(now),
-              "userDefine1": platNo,
-              "userDefine2": driverName,
-              "details": confirmShipmentDetails
-            }
-          ]
+          "orderinfo": confirmShipments
         }
       }
     };
@@ -732,20 +832,39 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     this.confirmToteData = {
       "xmldata": {
         "data": {
-          "orderinfo": [
-            {
-              "_comment": "this file has to change 'warehouseId, orderType, docNo, soReferenceA, soReferenceB, referenceNo, sku. toteId'",
-              "warehouseId": "TDNE-01",
-              "orderType": this.deliveryOrderObject.po.orderType,
-              "customerId": "TD001",
-              "docNo": this.deliveryOrderObject.doNo,
-              "soReferenceA": this.deliveryOrderObject.po.poNo,
-              "soReferenceB": this.deliveryOrderObject.shipment.shipmentNo,
-              "details": confirmToteDetails
-            }
-          ]
+          "orderinfo": confirmTotes
         }
       }
+    }
+  }
+
+  buildConfirmShipmentData(orderType: string, doNo: string, poNo: string, shipmentNo: string, shipmentTime: string, platNo: string, driverName: string, details: any[]) {
+    return {
+      "warehouseId": "TDNE-01",
+      "orderType": orderType,
+      "customerId": "TD001",
+      "docNo": doNo,
+      "soReferenceA": poNo,
+      "soReferenceB": shipmentNo,
+      "deliveryNo": doNo,
+      "carrierId": "210000263",
+      "shippedTime": shipmentTime,
+      "userDefine1": platNo,
+      "userDefine2": driverName,
+      "details": details
+    }
+  }
+
+  buildConfirmToteData(orderType: string, doNo: string, poNo: string, shipmentNo: string, details: any[]) {
+    return {
+      "_comment": "this file has to change 'warehouseId, orderType, docNo, soReferenceA, soReferenceB, referenceNo, sku. toteId'",
+      "warehouseId": "TDNE-01",
+      "orderType": orderType,
+      "customerId": "TD001",
+      "docNo": doNo,
+      "soReferenceA": poNo,
+      "soReferenceB": shipmentNo,
+      "details": details
     }
   }
 
@@ -790,31 +909,37 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     this.toteIdList = []
     this.dispatchForm.reset()
     this.toteForm.reset()
+    this.deliveryOrders.clear()
+    this.deliveryOrders.push(
+      this.fb.group({
+        value: ['', Validators.required]
+      })
+    )
     this.confirmShipmentData = null
     this.confirmToteData = null
   }
 
   copyToClipboard(element: HTMLElement, button: HTMLButtonElement): void {
-  const range = document.createRange();
-  range.selectNode(element);
-  const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNode(element);
+    const selection = window.getSelection();
 
-  if (selection) {
-    selection.removeAllRanges();
-    selection.addRange(range);
-    document.execCommand('copy');
-    selection.removeAllRanges();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.execCommand('copy');
+      selection.removeAllRanges();
+    }
+
+    // Update button UI
+    button.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+    button.disabled = true;
+
+    setTimeout(() => {
+      button.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+      button.disabled = false;
+    }, 2000);
   }
-
-  // Update button UI
-  button.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
-  button.disabled = true;
-
-  setTimeout(() => {
-    button.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
-    button.disabled = false;
-  }, 2000);
-}
 
 }
 

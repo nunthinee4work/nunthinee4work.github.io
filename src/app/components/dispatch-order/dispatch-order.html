@@ -2,7 +2,7 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">
       Generate Payload Dispatch Order
-      <span *ngIf="dispatchForm.value.orderFlow">({{ dispatchForm.value.orderFlow }})</span>
+      <span *ngIf="dispatchForm.value.orderFlow">({{ dispatchForm.value.orderFlow == 'CROSS_DOCK' ? 'Cross Dock' : 'Keep Stock' }})</span>
     </h1>
     <button type="button" class="btn btn-outline-primary" (click)="openModal()">Show Tote Codes</button>
   </div>
@@ -11,7 +11,7 @@
     <label for="orderFlow" class="text-red text-xl" style="font-size: 25px;">Order Flow :</label>
     <ng-select [items]="orderFlows" bindLabel="name" bindValue="id" placeholder="Select mode"
       formControlName="orderFlow" class="custom-ng-select"
-      [class.is-invalid]="dispatchForm.get('orderFlow')?.invalid && dispatchForm.get('orderFlow')?.touched">
+      [class.is-invalid]="dispatchForm.get('orderFlow')?.invalid && dispatchForm.get('orderFlow')?.touched" (change)="onChangedOrderFlow()">
     </ng-select>
   </div>
 
@@ -26,9 +26,20 @@
   <p><b>Step1:</b> Go to mongodb collection <b>order.delivery_orders</b> then right click at your document and select
     copy > <b>Copy Value as Plain Text</b></p>
   <p><b>Step2:</b> Paste your Delivery Order here</p>
-  <div class="textarea-content">
-    <textarea formControlName="deliveryOrder" (input)="onChangedInputDelivery()"
-      [class.is-invalid]="dispatchForm.get('deliveryOrder')?.invalid && dispatchForm.get('deliveryOrder')?.touched"></textarea>
+
+  <div formArrayName="deliveryOrders">
+    <div *ngFor="let ctrl of deliveryOrders.controls; let i = index" [formGroupName]="i" class="textarea-row">
+      <textarea formControlName="value" (input)="onChangedInputDelivery(i)"
+        [class.is-invalid]="ctrl.get('value')?.invalid && ctrl.get('value')?.touched"
+        class="form-control textarea-flex"></textarea>
+
+      <button type="button" class="btn btn-danger btn-sm ms-2" (click)="removeDeliveryOrder(i)"
+        *ngIf="deliveryOrders.length > 1">–</button>
+    </div>
+  </div>
+
+  <div *ngIf="dispatchForm.value.orderFlow == 'CROSS_DOCK'">
+    <button type="button" class="btn btn-primary btn-sm mt-2" (click)="addDeliveryOrder()">+ Add Delivery Order</button>
   </div>
 
   <hr class="mt-4">
@@ -68,6 +79,7 @@
       <table class="table table-bordered">
         <thead>
           <tr>
+            <th class="text-center">Delivery Order No.</th>
             <th class="text-center">Product Name</th>
             <th class="text-center">Barcode</th>
             <th class="text-center">Assigned Qty</th>
@@ -77,6 +89,7 @@
         </thead>
         <tbody formArrayName="items">
           <tr *ngFor="let item of items.controls; let i = index" [formGroupName]="i">
+            <td>{{ item.get('doNo')?.value }}</td>
             <td>{{ item.get('productName')?.value }}</td>
             <td>{{ item.get('barcode')?.value }}</td>
             <td class="text-center">
@@ -97,7 +110,7 @@
                         <input type="text" class="form-control" formControlName="toteId" placeholder="Tote ID"
                           [class.is-invalid]="d.get('toteId')?.invalid && d.get('toteId')?.touched">
                       </div>
-                      <div class="col-1">
+                      <div class="col-1" *ngIf="getDetails(i).length > 1">
                         <button type="button" class="btn btn-danger btn-sm" (click)="removeDetail(i, j)">–</button>
                       </div>
                     </div>

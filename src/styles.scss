@@ -383,3 +383,14 @@ ng-select.custom-ng-select {
   font-family: monospace;
   white-space: pre-wrap; /* ถ้าอยากให้ตัดบรรทัด */
 }
+
+.textarea-row {
+  display: flex;
+  align-items: flex-start; /* หรือ center ถ้าปรับความสูง textarea */
+  margin-bottom: 0.5rem;
+}
+
+.textarea-flex {
+  flex: 1;
+  resize: vertical; /* ถ้าอยากให้ user ปรับความสูงได้ */
+}
