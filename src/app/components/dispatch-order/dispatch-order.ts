@@ -30,7 +30,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   modes = [
     { id: 'CUSTOM_TOTE', name: 'Custom Tote' },
     { id: 'RANDOM_TOTE', name: 'Random Tote' },
-    { id: 'SINGLE_TOTE', name: 'Single tote for all products' }
+    { id: 'SINGLE_TOTE', name: 'Single Tote' }
   ];
 
   orderFlows = [
@@ -136,9 +136,9 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   ngOnInit(): void {
     const now = new Date()
     this.dispatchForm = this.fb.group({
-      deliveryOrder: [''],
-      mode: [null],
-      orderFlow: [null],
+      deliveryOrder: ['', Validators.required],
+      mode: [null, Validators.required],
+      orderFlow: [null, Validators.required],
       subfixToteCode: [''],
       startRunningNumber: [''],
       toteId: [''],

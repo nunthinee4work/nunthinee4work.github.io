@@ -1,20 +1,25 @@
 <form [formGroup]="dispatchForm" (ngSubmit)="onSubmit()">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0">Generate Payload Dispatch Order ({{ dispatchForm.value.orderFlow }})</h1>
+    <h1 class="mb-0">
+      Generate Payload Dispatch Order
+      <span *ngIf="dispatchForm.value.orderFlow">({{ dispatchForm.value.orderFlow }})</span>
+    </h1>
     <button type="button" class="btn btn-outline-primary" (click)="openModal()">Show Tote Codes</button>
   </div>
 
   <div class="form-group mb-3 mt-3">
     <label for="orderFlow" class="text-red text-xl" style="font-size: 25px;">Order Flow :</label>
     <ng-select [items]="orderFlows" bindLabel="name" bindValue="id" placeholder="Select mode"
-      formControlName="orderFlow" class="custom-ng-select">
+      formControlName="orderFlow" class="custom-ng-select"
+      [class.is-invalid]="dispatchForm.get('orderFlow')?.invalid && dispatchForm.get('orderFlow')?.touched">
     </ng-select>
   </div>
 
   <div class="form-group mb-3 mt-3">
     <label for="mode" class="text-red text-xl" style="font-size: 25px;">Mode :</label>
     <ng-select [items]="modes" bindLabel="name" bindValue="id" placeholder="Select mode" formControlName="mode"
-      class="custom-ng-select" (change)="onChangedMode()">
+      class="custom-ng-select" (change)="onChangedMode()"
+      [class.is-invalid]="dispatchForm.get('mode')?.invalid && dispatchForm.get('mode')?.touched">
     </ng-select>
   </div>
 
@@ -22,7 +27,8 @@
     copy > <b>Copy Value as Plain Text</b></p>
   <p><b>Step2:</b> Paste your Delivery Order here</p>
   <div class="textarea-content">
-    <textarea formControlName="deliveryOrder" (input)="onChangedInputDelivery()"></textarea>
+    <textarea formControlName="deliveryOrder" (input)="onChangedInputDelivery()"
+      [class.is-invalid]="dispatchForm.get('deliveryOrder')?.invalid && dispatchForm.get('deliveryOrder')?.touched"></textarea>
   </div>
 
   <hr class="mt-4">
