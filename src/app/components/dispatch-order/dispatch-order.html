@@ -2,7 +2,8 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">
       Generate Payload Dispatch Order
-      <span *ngIf="dispatchForm.value.orderFlow">({{ dispatchForm.value.orderFlow == 'CROSS_DOCK' ? 'Cross Dock' : 'Keep Stock' }})</span>
+      <span *ngIf="dispatchForm.value.orderFlow">({{ dispatchForm.value.orderFlow == 'CROSS_DOCK' ? 'Cross Dock' :
+        'KeepStock' }})</span>
     </h1>
     <button type="button" class="btn btn-outline-primary" (click)="openModal()">Show Tote Codes</button>
   </div>
@@ -11,7 +12,8 @@
     <label for="orderFlow" class="text-red text-xl" style="font-size: 25px;">Order Flow :</label>
     <ng-select [items]="orderFlows" bindLabel="name" bindValue="id" placeholder="Select mode"
       formControlName="orderFlow" class="custom-ng-select"
-      [class.is-invalid]="dispatchForm.get('orderFlow')?.invalid && dispatchForm.get('orderFlow')?.touched" (change)="onChangedOrderFlow()">
+      [class.is-invalid]="dispatchForm.get('orderFlow')?.invalid && dispatchForm.get('orderFlow')?.touched"
+      (change)="onChangedOrderFlow()">
     </ng-select>
   </div>
 
@@ -40,6 +42,31 @@
 
   <div *ngIf="dispatchForm.value.orderFlow == 'CROSS_DOCK'">
     <button type="button" class="btn btn-primary btn-sm mt-2" (click)="addDeliveryOrder()">+ Add Delivery Order</button>
+  </div>
+
+  <div class="radio-group" *ngIf="dispatchForm.value.orderFlow === 'CROSS_DOCK'">
+    <label>Price Date Source:</label>
+    <label>
+      <input type="radio" formControlName="priceDateSource" value="MANUAL" />
+      Manual
+    </label>
+    <label>
+      <input type="radio" formControlName="priceDateSource" value="QUERY" />
+      Query Database
+    </label>
+  </div>
+
+  <div class="mt-3"
+    *ngIf="dispatchForm.value.orderFlow == 'CROSS_DOCK' && dispatchForm.value.priceDateSource === 'QUERY'">
+    <p><b>Step3:</b> Copy the Mongo query below to retrieve the price date in collection <b>stock.external_prices</b> >
+      <b>Copy Value as Plain Text</b>
+    </p>
+    <app-code-box [codeText]="queryExternalPriceString"></app-code-box>
+
+    <p class="mt-3"><b>Step4:</b> Paste your result of external prices here</p>
+    <textarea formControlName="externalPrice"
+      [class.is-invalid]="dispatchForm.get('externalPrice')?.invalid && dispatchForm.get('externalPrice')?.touched"
+      class="form-control textarea-flex"></textarea>
   </div>
 
   <hr class="mt-4">
@@ -84,6 +111,7 @@
             <th class="text-center">Barcode</th>
             <th class="text-center">Assigned Qty</th>
             <th class="text-center">Unit</th>
+            <th class="text-center" *ngIf="dispatchForm.value.orderFlow == 'CROSS_DOCK'">Price Date</th>
             <th class="text-center">Pick Details</th>
           </tr>
         </thead>
@@ -91,12 +119,19 @@
           <tr *ngFor="let item of items.controls; let i = index" [formGroupName]="i">
             <td>{{ item.get('doNo')?.value }}</td>
             <td>{{ item.get('productName')?.value }}</td>
-            <td>{{ item.get('barcode')?.value }}</td>
+            <td style="white-space: nowrap;">
+              {{ item.get('barcode')?.value }}
+              <app-copy-button [textToCopy]="item.get('barcode')?.value" [showIconOnly]="true"></app-copy-button>
+            </td>
             <td class="text-center">
               <strong>{{ item.get('assignedQty')?.value }}</strong> ({{ item.get('assignedQty')?.value *
               item.get('unitFactor')?.value }} PC)
             </td>
             <td class="text-center">{{ item.get('unit')?.value }}</td>
+            <td class="text-center" *ngIf="dispatchForm.value.orderFlow == 'CROSS_DOCK'">
+              <input type="text" class="form-control" formControlName="priceDate" placeholder="Price Date"
+                [class.is-invalid]="item.get('priceDate')?.invalid && item.get('priceDate')?.touched">
+            </td>
             <td>
               <table class="table table-sm table-borderless" formArrayName="details">
                 <tr *ngFor="let d of getDetails(i).controls; let j = index" [formGroupName]="j" class="pick-detail-row">
@@ -106,9 +141,10 @@
                         <input type="text" class="form-control" formControlName="pickQty" placeholder="Pick Qty"
                           [class.is-invalid]="d.get('pickQty')?.invalid && d.get('pickQty')?.touched">
                       </div>
-                      <div class="col-7">
+                      <div class="col-7 d-flex align-items-center">
                         <input type="text" class="form-control" formControlName="toteId" placeholder="Tote ID"
-                          [class.is-invalid]="d.get('toteId')?.invalid && d.get('toteId')?.touched">
+                          [class.is-invalid]="d.get('toteId')?.invalid && d.get('toteId')?.touched" />
+                        <app-copy-button class="ms-2" [textToCopy]="d.get('toteId')?.value" [showIconOnly]="true"></app-copy-button>
                       </div>
                       <div class="col-1" *ngIf="getDetails(i).length > 1">
                         <button type="button" class="btn btn-danger btn-sm" (click)="removeDetail(i, j)">–</button>
@@ -145,18 +181,10 @@
       [class.is-invalid]="dispatchForm.get('driverName')?.invalid && dispatchForm.get('driverName')?.touched">
   </div>
 
-  <div class="form-group">
-    <label for="priceDate">Price Date:</label>
-    <input type="text" id="priceDate" formControlName="priceDate" placeholder="YYYY-MM-DD"
-      [class.is-invalid]="dispatchForm.get('priceDate')?.invalid && dispatchForm.get('priceDate')?.touched">
-    <small class="form-text text-muted ms-2">ดึงข้อมูลจาก stock.external_prices โดยใช้ barcode และเลือกรายการที่มี
-      createdDate ล่าสุด (มีผลกับทุก item อาจจะต้องไปแก้ไขเพิ่มเองในภายหลัง)</small>
-  </div>
-
   <div class="mt-4">
-    <button type="button" class="btn btn-secondary me-2" (click)="onPreview()"
+    <!-- <button type="button" class="btn btn-secondary me-2" (click)="onPreview()"
       [disabled]="dispatchForm.value.mode === 'CUSTOM_TOTE'">
-      Preview</button>
+      Preview</button> -->
     <button type="button" class="btn btn-primary me-2" (click)="onSubmit()">
       {{dispatchForm.get('orderFlow')?.value ==
       'KEEP_STOCK' ? 'Generate Payload' : 'Export CSV'}}</button>
@@ -167,25 +195,13 @@
 </form>
 
 <div *ngIf="confirmToteData">
-  <h3>
-    Payload Confirm Tote Output:
-    <button class="copy-button" (click)="copyToClipboard(confirmToteOutput, copyConfirmToteOutput)"
-      #copyConfirmToteOutput>
-      <i class="fa-regular fa-copy"></i> Copy
-    </button>
-  </h3>
-  <pre #confirmToteOutput class="json-output">{{ confirmToteData | json }}</pre>
+  <h3>Payload Confirm Tote Output:</h3>
+  <app-code-box [codeText]="confirmToteData"></app-code-box>
 </div>
 
-<div *ngIf="confirmShipmentData">
-  <h3>
-    Payload Confirm Shipment Output:
-    <button class="copy-button" (click)="copyToClipboard(confirmShipmentOutput, copyConfirmShipmentOutput)"
-      #copyConfirmShipmentOutput>
-      <i class="fa-regular fa-copy"></i> Copy
-    </button>
-  </h3>
-  <pre #confirmShipmentOutput class="json-output">{{ confirmShipmentData | json }}</pre>
+<div *ngIf="confirmShipmentData" class="mt-3">
+  <h3>Payload Confirm Shipment Output:</h3>
+  <app-code-box [codeText]="confirmShipmentData"></app-code-box>
 </div>
 
 <div class="modal fade" id="totePreviewModal" tabindex="-1" aria-hidden="true">

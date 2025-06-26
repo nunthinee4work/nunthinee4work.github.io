@@ -1,0 +1,4 @@
+<button type="button" (click)="copy($event)" class="copy-btn" [disabled]="isCopied" [class.icon-only]="showIconOnly">
+  <i [ngClass]="isCopied ? 'fa-solid fa-check' : 'fa-regular fa-copy'"></i>
+  <span *ngIf="!showIconOnly" class="ms-1">{{ isCopied ? 'Copied!' : 'Copy' }}</span>
+</button>

@@ -5,6 +5,9 @@ import { CommonModule } from '@angular/common';
 import { ToastrService } from 'ngx-toastr';
 import { DateUtils } from '../../utils/date.utils';
 declare var bootstrap: any;
+import { combineLatest } from 'rxjs';
+import { CopyButton } from "../../shared/copy-button/copy-button";
+import { CodeBox } from '../../shared/code-box/code-box';
 @Component({
   selector: 'app-dispatch-order',
   standalone: true,
@@ -12,6 +15,8 @@ declare var bootstrap: any;
     CommonModule,
     ReactiveFormsModule,
     NgSelectComponent,
+    CopyButton,
+    CodeBox
   ],
   templateUrl: './dispatch-order.html',
   styleUrls: ['./dispatch-order.scss']
@@ -25,6 +30,9 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   modal: any;
   confirmToteData: any
   confirmShipmentData: any
+  barcodList: string[] = []
+  priceDateList: any[] = []
+  queryExternalPriceString: string = ''
 
   modes = [
     { id: 'CUSTOM_TOTE', name: 'Custom Tote' },
@@ -149,12 +157,13 @@ export class DispatchOrder implements OnInit, AfterViewInit {
       toteId: [''],
       platNo: ['Truck@Galaxy', Validators.required],
       driverName: ['Dominic Toretto', Validators.required],
-      priceDate: [now.toISOString().split('T')[0], Validators.required],
-    });
+      externalPrice: [null],
+      priceDateSource: ['MANUAL']
+    })
 
     this.toteForm = this.fb.group({
       items: this.fb.array([])
-    });
+    })
 
     this.dispatchForm.get('mode')?.valueChanges.subscribe(mode => {
       const toteIdControl = this.dispatchForm.get('toteId');
@@ -178,7 +187,39 @@ export class DispatchOrder implements OnInit, AfterViewInit {
       toteIdControl?.updateValueAndValidity();
       subfixToteCodeControl?.updateValueAndValidity();
       startRunningNumberControl?.updateValueAndValidity();
+    })
+
+    this.dispatchForm.get('orderFlow')?.valueChanges.subscribe(orderFlow => {
+      const externalPriceControl = this.dispatchForm.get('externalPrice');
+      if (orderFlow === 'CROSS_DOCK') {
+        externalPriceControl?.setValidators([Validators.required]);
+      } else {
+        externalPriceControl?.clearValidators();
+      }
+      this.onPreviewToteDetail()
+    })
+
+    combineLatest([
+      this.dispatchForm.get('subfixToteCode')!.valueChanges,
+      this.dispatchForm.get('startRunningNumber')!.valueChanges,
+    ]).subscribe(([subfixToteCode, startRunningNumber]) => {
+      if (subfixToteCode && startRunningNumber) {
+        this.onPreviewToteDetail();
+      }
     });
+
+    this.dispatchForm.get('toteId')?.valueChanges.subscribe(value => {
+      this.onPreviewToteDetail()
+    })
+
+    this.dispatchForm.get('externalPrice')?.valueChanges.subscribe(value => {
+      this.onPreviewToteDetail()
+    })
+
+    this.dispatchForm.get('priceDateSource')?.valueChanges.subscribe(value => {
+      this.generateExternalPriceQuery()
+      this.onPreviewToteDetail()
+    })
   }
 
   ngAfterViewInit(): void {
@@ -208,7 +249,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
   removeDeliveryOrder(index: number) {
     this.deliveryOrders.removeAt(index);
-    this.mapToteDetail()
+    this.onPreviewToteDetail()
   }
 
   getInputDeliveryOrderList(): any[] {
@@ -227,7 +268,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   }
 
   onChangedInputDelivery(index: number) {
-    this.mapToteDetail()
+    this.generateExternalPriceQuery()
+    this.onPreviewToteDetail()
   }
 
   onChangedOrderFlow(): void {
@@ -239,18 +281,30 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     )
   }
 
-  createItemForm(product: any): FormGroup {
-    return this.fb.group({
-      productName: [product.productName],
-      barcode: [product.barcode],
-      assignedQty: [product.assignedQty],
-      pickQty: [''],
-      toteId: ['']
-    });
+  generateExternalPriceQuery() {
+    this.queryExternalPriceString = ''
+    const orderFlow = this.dispatchForm.get('orderFlow')?.value
+    const priceDateSource = this.dispatchForm.get('priceDateSource')?.value
+
+    if (orderFlow == 'CROSS_DOCK' && priceDateSource == 'QUERY' && this.dispatchForm.get('deliveryOrders')?.value.length > 0) {
+      let barcodes: any[] = []
+      const deliveryOrders = this.getInputDeliveryOrderList()
+      deliveryOrders.forEach((deliveryOrder: any) => {
+        if (deliveryOrder.items.length > 0) {
+          deliveryOrder.items.forEach((item: any) => {
+            barcodes.push(item.barcode)
+          })
+        }
+      })
+
+      const formattedBarcodes = barcodes.map((b: any) => `"${b}"`).join(', ');
+      this.queryExternalPriceString = `db.external_prices.aggregate([{"$match":{"barcode":{"$in":[${formattedBarcodes}]}}},{"$sort":{"createdDate":-1}},{"$group":{"_id":"$barcode","latest":{"$first":"$$ROOT"}}},{"$replaceRoot":{"newRoot":"$latest"}},{"$project":{"_id":0,"articleNo":1,"barcode":1,"createdDate":1}}])`;
+    }
   }
 
   createItem(productName: string, articleNo: string, barcode: string, assignedQty: number, unit: string, toteId: string, unitFactor?: number,
-    doNo?: string, deliveryDate?: string, pickDate?: string, poNo?: string, shipmentNo?: string, orderType?: string): FormGroup {
+    doNo?: string, deliveryDate?: string, pickDate?: string, poNo?: string, shipmentNo?: string, orderType?: string, priceDate?: string): FormGroup {
+    const now = new Date()
     return this.fb.group({
       productName: [productName],
       articleNo: [articleNo],
@@ -264,6 +318,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
       poNo: [poNo],
       shipmentNo: [shipmentNo],
       orderType: [orderType],
+      priceDate: [priceDate, Validators.required],
       details: this.fb.array([this.createDetail(assignedQty, toteId)])
     });
   }
@@ -281,23 +336,36 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
   onChangedMode(): void {
     this.items.clear()
-    this.mapToteDetail()
+    this.onPreviewToteDetail()
   }
 
-  mapToteDetail(): void {
-    console.log('come')
+  onPreviewToteDetail(): void {
     const mode = this.dispatchForm.get('mode')?.value ?? ''
     const orderFlow = this.dispatchForm.get('orderFlow')?.value ?? ''
-    if (mode != 'CUSTOM_TOTE' && this.items.length == 0) {
-      return;
-    }
+    const priceDateSource = this.dispatchForm.get('priceDateSource')?.value ?? ''
 
     const inputDeliveryOrders = this.getInputDeliveryOrderList()
     const deliveryItemSize = this.getTotalSizeFromDeliveryOrders()
     this.items.clear()
 
+    const subfixToteCode: number = this.dispatchForm.get('subfixToteCode')?.value;
+    const startRunningNumber: number = this.dispatchForm.get('startRunningNumber')?.value;
+    const toteId: number = this.dispatchForm.get('toteId')?.value;
+
+    if (deliveryItemSize == 0
+      || mode == 'RANDOM_TOTE' && (!subfixToteCode || !startRunningNumber)
+      || mode == 'SIGNLE_TOTE' && !toteId
+    ) {
+      return;
+    }
+
     inputDeliveryOrders.forEach((deliveryOrder: any) => {
       if (deliveryOrder && Array.isArray(deliveryOrder.items)) {
+        if ((orderFlow == 'KEEP_STOCK' && deliveryOrder.orderFlow != 'KEEP_STOCK') || (orderFlow == 'CROSS_DOCK' && deliveryOrder.orderFlow != 'CROSS_DOCK')) {
+          this.toastr.error('Invalid delivery order structure: mismatched order flow type', 'แจ้งเตือน');
+          return;
+        }
+
         const items = deliveryOrder.items;
         const doNo = deliveryOrder.doNo
         const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
@@ -309,6 +377,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
         }
 
         if (items && Array.isArray(items)) {
+          const barcodeCreatedDateMap = isKeepStock || priceDateSource == 'MANUAL' ? {} : this.getBarcodeCreatedDateMap()
+          const priceDate = new Date().toISOString().slice(0, 10)
           items.forEach((item: any, index: number) => {
             const toteId = mode == 'RANDOM_TOTE' ? this.toteIdList[index] : (mode == 'SINGLE_TOTE' ? this.dispatchForm.get('toteId')?.value : '')
             this.items.push(
@@ -316,8 +386,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
                 item.productName ?? '',
                 item.articleNo ?? '',
                 item.barcode ?? '',
-                isKeepStock ? item.qty : item.assignedQty ?? 0, //TODO
-                isKeepStock ? item.unit : item.crossDock?.unit ?? '', //TODO
+                isKeepStock ? item.qty : item.assignedQty, //TODO
+                isKeepStock ? item.unit : item.crossDock?.unit, //TODO
                 toteId,
                 item.unitFactor ?? 0,
                 doNo,
@@ -326,6 +396,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
                 isKeepStock ? deliveryOrder.po.poNo : '',
                 isKeepStock ? deliveryOrder.shipment.shipmentNo : '',
                 isKeepStock ? deliveryOrder.po.orderType : '',
+                isKeepStock || priceDateSource == 'MANUAL' ? priceDate : barcodeCreatedDateMap.get(item.barcode)
               )
             );
           });
@@ -334,6 +405,16 @@ export class DispatchOrder implements OnInit, AfterViewInit {
         console.warn('Invalid delivery order or items missing');
       }
     })
+  }
+
+  getBarcodeCreatedDateMap(): any {
+    const externalPrices = JSON.parse(this.dispatchForm.get('externalPrice')?.value)
+    return new Map<string, string>(
+      externalPrices.map((item: any) => {
+        const formattedDate = new Date(item.createdDate).toISOString().slice(0, 10);
+        return [item.barcode, formattedDate];
+      })
+    )
   }
 
   getDetails(index: number): FormArray {
@@ -374,7 +455,6 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
     const platNo = dispatchValue.platNo
     const driverName = dispatchValue.driverName
-    const priceDate = dispatchValue.priceDate
 
     if (this.getTotalSizeFromDeliveryOrders() == 0) {
       this.toastr.error('Invalid deliveryOrder structure: missing items array', 'แจ้งเตือน');
@@ -382,7 +462,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     }
 
     if (orderFlow == 'CROSS_DOCK') {
-      this.generateDispatchCrossDock(driverName, platNo, priceDate)
+      this.generateDispatchCrossDock(driverName, platNo)
     } else {
       this.generateDispatcKeepStock()
     }
@@ -435,8 +515,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
   buildCSVData(
     driverName: string,
-    plateNo: string,
-    priceDate: string): any[] {
+    plateNo: string): any[] {
 
     const rows: (string | number)[][] = [];
     const customToteItems: any[] = this.items.value
@@ -449,7 +528,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     const currentDate = now.toISOString().split('T')[0]
     const expDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
 
-    if (mode == 'CUSTOM_TOTE' || itemCount > 0) {
+    if (itemCount > 0) {
       for (let i = 0; i < itemCount; i++) {
         const doItem = customToteItems[i]
 
@@ -459,113 +538,113 @@ export class DispatchOrder implements OnInit, AfterViewInit {
             rows.push(this.mapRowCsv(doItem.doNo,
               doItem.barcode,
               item.pickQty,
-              item.unit,
+              doItem.unit,
               item.toteId,
               doItem.deliveryDate,
               doItem.pickDate,
               driverName,
               plateNo,
-              priceDate,
+              doItem.priceDate,
               expDate,
               currentDate
             ));
           }
         }
       }
-    } else {
-      const itemSize = this.getTotalSizeFromDeliveryOrders()
-      if (itemSize > 0) {
-        this.items.clear()
-      }
-
-      let index = 0
-
-      inputDeliveryOrders.forEach((deliveryOrder: any) => {
-        const doNo = deliveryOrder.doNo
-        const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
-        const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.pickDate))
-
-        if (mode == 'RANDOM_TOTE') {
-          this.generateToteIdList(itemSize)
-
-          deliveryOrder.items.forEach((item: any) => {
-            const toteId = this.toteIdList[index]
-            this.items.push(
-              this.createItem(
-                item.productName ?? '',
-                item.articleNo ?? '',
-                item.barcode ?? '',
-                item.assignedQty ?? 0,
-                item.crossDock.unit ?? '',
-                toteId,
-                item.unitFactor ?? 0,
-                doNo,
-                deliveryDate,
-                pickDate
-              )
-            )
-
-            rows.push(this.mapRowCsv(doNo,
-              item.barcode,
-              item.assignedQty,
-              item.crossDock.unit,
-              toteId,
-              deliveryDate,
-              pickDate,
-              driverName,
-              plateNo,
-              priceDate,
-              expDate,
-              currentDate
-            ))
-
-            index++
-          });
-        }
-        else {
-          const toteId: string = dispatchFormData.toteId;
-
-          deliveryOrder.items.forEach((item: any) => {
-            this.items.push(
-              this.createItem(
-                item.productName ?? '',
-                item.articleNo ?? '',
-                item.barcode ?? '',
-                item.assignedQty ?? 0,
-                item.crossDock.unit ?? '',
-                toteId,
-                item.unitFactor ?? 0,
-                doNo,
-                deliveryDate,
-                pickDate
-              )
-            );
-
-            rows.push(this.mapRowCsv(doNo,
-              item.barcode,
-              item.assignedQty,
-              item.crossDock.unit,
-              toteId,
-              deliveryDate,
-              pickDate,
-              driverName,
-              plateNo,
-              priceDate,
-              expDate,
-              currentDate
-            ))
-          })
-        }
-      })
     }
+    // else {
+    //   const itemSize = this.getTotalSizeFromDeliveryOrders()
+    //   if (itemSize > 0) {
+    //     this.items.clear()
+    //   }
+
+    //   let index = 0
+
+    //   inputDeliveryOrders.forEach((deliveryOrder: any) => {
+    //     const doNo = deliveryOrder.doNo
+    //     const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
+    //     const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.pickDate))
+
+    //     if (mode == 'RANDOM_TOTE') {
+    //       this.generateToteIdList(itemSize)
+
+    //       deliveryOrder.items.forEach((item: any) => {
+    //         const toteId = this.toteIdList[index]
+    //         this.items.push(
+    //           this.createItem(
+    //             item.productName ?? '',
+    //             item.articleNo ?? '',
+    //             item.barcode ?? '',
+    //             item.assignedQty ?? 0,
+    //             item.crossDock.unit ?? '',
+    //             toteId,
+    //             item.unitFactor ?? 0,
+    //             doNo,
+    //             deliveryDate,
+    //             pickDate
+    //           )
+    //         )
+
+    //         rows.push(this.mapRowCsv(doNo,
+    //           item.barcode,
+    //           item.assignedQty,
+    //           item.crossDock.unit,
+    //           toteId,
+    //           deliveryDate,
+    //           pickDate,
+    //           driverName,
+    //           plateNo,
+    //           priceDate,
+    //           expDate,
+    //           currentDate
+    //         ))
+
+    //         index++
+    //       });
+    //     }
+    //     else {
+    //       const toteId: string = dispatchFormData.toteId;
+
+    //       deliveryOrder.items.forEach((item: any) => {
+    //         this.items.push(
+    //           this.createItem(
+    //             item.productName ?? '',
+    //             item.articleNo ?? '',
+    //             item.barcode ?? '',
+    //             item.assignedQty ?? 0,
+    //             item.crossDock.unit ?? '',
+    //             toteId,
+    //             item.unitFactor ?? 0,
+    //             doNo,
+    //             deliveryDate,
+    //             pickDate
+    //           )
+    //         );
+
+    //         rows.push(this.mapRowCsv(doNo,
+    //           item.barcode,
+    //           item.assignedQty,
+    //           item.crossDock.unit,
+    //           toteId,
+    //           deliveryDate,
+    //           pickDate,
+    //           driverName,
+    //           plateNo,
+    //           priceDate,
+    //           expDate,
+    //           currentDate
+    //         ))
+    //       })
+    //     }
+    //   })
+    // }
 
     return rows;
   }
 
   generateDispatchCrossDock(
     driverName: string,
-    plateNo: string,
-    priceDate: string): void {
+    plateNo: string): void {
     const headers: string[] = [
       "01", "shipmentNo", "doNo", "barcode", "pickedQty", "uom", "toteId", "deliverydate",
       "pickupdate", "couriercode", "couriername", "drivername", "truckId", "plateno",
@@ -573,7 +652,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     ];
 
     const rows: (string | number)[][] = [];
-    rows.push(...this.buildCSVData(driverName, plateNo, priceDate));
+    rows.push(...this.buildCSVData(driverName, plateNo));
 
     const csvArray = [headers, ...rows];
 
@@ -597,58 +676,58 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     link.click();
   }
 
-  onPreview(): void {
-    if (this.validateForm()) {
-      return;
-    }
-    const itemCount = this.getTotalSizeFromDeliveryOrders()
+  // onPreview(): void {
+  //   if (this.validateForm()) {
+  //     return;
+  //   }
+  //   const itemCount = this.getTotalSizeFromDeliveryOrders()
 
-    if (itemCount > 0) {
-      this.items.clear();
+  //   if (itemCount > 0) {
+  //     this.items.clear();
 
-      const deliveryOrders = this.getInputDeliveryOrderList()
-      const dispatchFormData = this.dispatchForm.value
-      const subfixToteCode: string = dispatchFormData.subfixToteCode;
-      const runningRandomStart: number = dispatchFormData.startRunningNumber;
-      const mode: string = dispatchFormData.mode
-      const orderFlow: string = dispatchFormData.orderFlow
-      const toteId: string = dispatchFormData.toteId
-      this.toteIdList = []
+  //     const deliveryOrders = this.getInputDeliveryOrderList()
+  //     const dispatchFormData = this.dispatchForm.value
+  //     const subfixToteCode: string = dispatchFormData.subfixToteCode;
+  //     const runningRandomStart: number = dispatchFormData.startRunningNumber;
+  //     const mode: string = dispatchFormData.mode
+  //     const orderFlow: string = dispatchFormData.orderFlow
+  //     const toteId: string = dispatchFormData.toteId
+  //     this.toteIdList = []
 
-      if (mode == 'RANDOM_TOTE') {
-        for (let i = 0; i < itemCount; i++) {
-          const randomIndex = Math.floor(Math.random() * this.prefixToteList.length);
-          let toteId = `${this.prefixToteList[randomIndex].code}${subfixToteCode}${String(runningRandomStart + i).padStart(4, '0')}`;
-          this.toteIdList.push(toteId);
-        }
-      }
+  //     if (mode == 'RANDOM_TOTE') {
+  //       for (let i = 0; i < itemCount; i++) {
+  //         const randomIndex = Math.floor(Math.random() * this.prefixToteList.length);
+  //         let toteId = `${this.prefixToteList[randomIndex].code}${subfixToteCode}${String(runningRandomStart + i).padStart(4, '0')}`;
+  //         this.toteIdList.push(toteId);
+  //       }
+  //     }
 
-      deliveryOrders.forEach((deliveryOrder: any) => {
-        const doNo = deliveryOrder.doNo
-        const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
-        const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.pickDate))
+  //     deliveryOrders.forEach((deliveryOrder: any) => {
+  //       const doNo = deliveryOrder.doNo
+  //       const deliveryDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.cutOffDeliveryDate))
+  //       const pickDate = this.dateUtils.generateDateTimeTDSC(new Date(deliveryOrder.po.pickDate))
 
-        deliveryOrder.items.forEach((item: any, index: number) => {
-          this.items.push(
-            this.createItem(
-              item.productName ?? '',
-              item.articleNo ?? '',
-              item.barcode ?? '',
-              orderFlow == 'CROSS_DOCK' ? item.assignedQty : item.qty,
-              orderFlow == 'CROSS_DOCK' ? item.crossDock.unit : item.unit,
-              mode == 'RANDOM_TOTE' ? this.toteIdList[index] : toteId,
-              item.unitFactor ?? 0,
-              doNo,
-              deliveryDate,
-              pickDate
-            )
-          );
-        });
-      })
-    } else {
-      console.warn('Invalid delivery order or items missing');
-    }
-  }
+  //       deliveryOrder.items.forEach((item: any, index: number) => {
+  //         this.items.push(
+  //           this.createItem(
+  //             item.productName ?? '',
+  //             item.articleNo ?? '',
+  //             item.barcode ?? '',
+  //             orderFlow == 'CROSS_DOCK' ? item.assignedQty : item.qty,
+  //             orderFlow == 'CROSS_DOCK' ? item.crossDock.unit : item.unit,
+  //             mode == 'RANDOM_TOTE' ? this.toteIdList[index] : toteId,
+  //             item.unitFactor ?? 0,
+  //             doNo,
+  //             deliveryDate,
+  //             pickDate
+  //           )
+  //         );
+  //       });
+  //     })
+  //   } else {
+  //     console.warn('Invalid delivery order or items missing');
+  //   }
+  // }
 
   generateDispatcKeepStock(): void {
     const confirmShipmentDetails: any[] = []
@@ -893,9 +972,9 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   }
 
   generateToteIdList(itemCount: number): void {
-    const dispatchFormData = this.dispatchForm.value
-    const subfixToteCode: string = dispatchFormData.subfixToteCode;
-    const runningRandomStart: number = dispatchFormData.startRunningNumber;
+    const subfixToteCode: string = this.dispatchForm.get('subfixToteCode')?.value
+    const runningRandomStart: number = this.dispatchForm.get('startRunningNumber')?.value
+    this.toteIdList = []
 
     for (let i = 0; i < itemCount; i++) {
       const randomIndex = Math.floor(Math.random() * this.prefixToteList.length);

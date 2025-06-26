@@ -394,3 +394,77 @@ ng-select.custom-ng-select {
   flex: 1;
   resize: vertical; /* ถ้าอยากให้ user ปรับความสูงได้ */
 }
+
+.code-container {
+  position: relative;
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 15px;
+  line-height: 1.5;
+}
+
+.code-content {
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre;
+  word-break: break-word;
+  padding-right: 60px;
+}
+
+.code-container > .copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  z-index: 10;
+}
+
+.copy-btn:active {
+  background-color: #45a049;
+}
+
+.modal-body {
+  max-height: 700px;
+  overflow-y: auto;
+}
+
+.copy-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.copy-btn.icon-only {
+  padding: 5px;
+  width: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #cccccc;
+}
+
+.copy-btn.icon-only:active {
+  background-color: #bbbbbb;
+}
+
+td {
+  white-space: nowrap; /* กัน wrap บรรทัดใหม่ */
+}
+
+td app-copy-button {
+  display: inline-block; /* หรือ inline-flex ถ้าต้องการจัด layout ภายใน */
+  margin-left: 8px; /* เว้นช่องว่างจาก barcode */
+  vertical-align: middle; /* จัดให้อยู่กึ่งกลางแนวตั้ง */
+}

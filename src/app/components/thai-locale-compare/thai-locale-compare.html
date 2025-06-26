@@ -1,0 +1,46 @@
+<form [formGroup]="form">
+  <h1>Thai Locale Compare</h1>
+
+  <div class="radio-group">
+    <label style="margin-right: 13px;">Input Separator:</label>
+    <label>
+      <input type="radio" formControlName="inputSeparator" value="NEW_LINE" /> New Line
+    </label>
+    <label>
+      <input type="radio" formControlName="inputSeparator" value="COMMA" /> Comma
+    </label>
+  </div>
+
+  <div class="radio-group">
+    <label>Output Separator:</label>
+    <label>
+      <input type="radio" formControlName="outputSeparator" value="NEW_LINE" /> New Line
+    </label>
+    <label>
+      <input type="radio" formControlName="outputSeparator" value="COMMA" /> Comma
+    </label>
+  </div>
+
+  <div class="textarea-content" style="margin-top: 20px;">
+    <label>Enter Text:</label>
+    <textarea formControlName="inputText" rows="5" style="width: 100%; margin-top: 10px;"></textarea>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <button type="button" class="btn btn-primary" (click)="toggleSortOrder()" style="margin-right: 10px;">
+      <i class="fas fa-sort-amount-up-alt"></i>
+      Sort {{ isAsc ? 'A to Z' : 'Z to A' }}
+    </button>
+    <button type="button" class="btn btn-danger" (click)="clearDataSorting()">Clear</button>
+  </div>
+
+  <hr style="margin-top: 30px;" />
+
+  <div>
+    <span style="font-size: 24px; font-weight: 500;" class="me-2">Result of Sort:</span>
+    <app-copy-button [textToCopy]="sortedOutput"></app-copy-button>
+  </div>
+
+  <pre id="sortingOutput" class="payload-content mt-4" *ngIf="sortResult.length > 0"
+    style="font-size: 18px;">{{ sortedOutput }}</pre>
+</form>

@@ -1,0 +1,9 @@
+<div class="code-container">
+  <button type="button" (click)="copyToClipboard()" class="copy-btn" [disabled]="copied">
+    <i [ngClass]="copied ? 'fa-solid fa-check' : 'fa-regular fa-copy'" class="me-1"></i>
+    {{ copied ? 'Copied!' : 'Copy' }}
+  </button>
+  <div class="code-content">
+    {{ formatCodeText(codeText) }}
+  </div>
+</div>

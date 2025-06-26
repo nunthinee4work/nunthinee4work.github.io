@@ -1,0 +1,44 @@
+<form [formGroup]="formatterForm">
+  <h1>Array Formatter</h1>
+
+  <div class="radio-group">
+    <label style="margin-right: 13px;">Input Separator:</label>
+    <label>
+      <input type="radio" formControlName="inputSeparator" value="NEW_LINE" /> New Line
+    </label>
+    <label>
+      <input type="radio" formControlName="inputSeparator" value="COMMA" /> Comma
+    </label>
+  </div>
+
+  <div class="radio-group">
+    <label>Output Separator:</label>
+    <label><input type="radio" formControlName="outputSeparator" value="NEW_LINE" />New Line</label>
+    <label><input type="radio" formControlName="outputSeparator" value="COMMA" />Comma</label>
+    <label><input type="radio" formControlName="outputSeparator" value="COMMA_NEWLINE" />Comma with New Line</label>
+  </div>
+
+  <div class="radio-group">
+    <label>Output Quote:</label>
+    <label><input type="radio" formControlName="outputQuote" value="NO_QUOTE" />No Quote</label>
+    <label><input type="radio" formControlName="outputQuote" value="SINGLE_QUOTE" />Single Quote</label>
+    <label><input type="radio" formControlName="outputQuote" value="DOUBLE_QUOTE" />Double Quote</label>
+  </div>
+
+  <div class="textarea-content" style="margin-top: 20px;">
+    <label>Enter Text:</label>
+    <textarea formControlName="inputText" style="margin-top: 10px;"></textarea>
+  </div>
+
+  <div class="mt-2">
+    <button class="btn btn-primary" type="button" (click)="processFormatter()" style="margin-right: 10px;">Processing</button>
+    <button class="btn btn-danger" type="button" (click)="clearFormatter()">Clear</button>
+  </div>
+
+  <hr style="margin-top: 30px;">
+
+  <h2>Result of Sort:
+    <app-copy-button [textToCopy]="formatterOutput"></app-copy-button>
+  </h2>
+  <pre class="payload-content" *ngIf="formatterOutput">{{ formatterOutput }}</pre>
+</form>

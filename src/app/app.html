@@ -9,6 +9,11 @@
     <div id="content-area">
       <ng-container [ngSwitch]="activeTab">
         <app-dispatch-order *ngSwitchCase="'dispatchOrder'"></app-dispatch-order>
+        <app-thai-locale-compare *ngSwitchCase="'thaiLocaleCompare'"></app-thai-locale-compare>
+        <app-array-formatter *ngSwitchCase="'arrayFormatter'"></app-array-formatter>
+        <app-unicode-converter *ngSwitchCase="'unicodeConverter'"></app-unicode-converter>
+        <app-create-stock-count-request *ngSwitchCase="'createStockCountRequest'"></app-create-stock-count-request>
+        <app-create-stock-count-group *ngSwitchCase="'createStockCountGroup'"></app-create-stock-count-group>
       </ng-container>
     </div>
   </div>
