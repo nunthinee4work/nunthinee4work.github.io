@@ -190,12 +190,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     })
 
     this.dispatchForm.get('orderFlow')?.valueChanges.subscribe(orderFlow => {
-      const externalPriceControl = this.dispatchForm.get('externalPrice');
-      if (orderFlow === 'CROSS_DOCK') {
-        externalPriceControl?.setValidators([Validators.required]);
-      } else {
-        externalPriceControl?.clearValidators();
-      }
+      this.setAndClearValidateExternalPrice()
       this.onPreviewToteDetail()
     })
 
@@ -217,6 +212,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     })
 
     this.dispatchForm.get('priceDateSource')?.valueChanges.subscribe(value => {
+      this.setAndClearValidateExternalPrice()
       this.generateExternalPriceQuery()
       this.onPreviewToteDetail()
     })
@@ -245,6 +241,18 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     this.deliveryOrders.push(this.fb.group({
       value: ['', Validators.required]
     }));
+  }
+
+  setAndClearValidateExternalPrice() {
+    const externalPriceControl = this.dispatchForm.get('externalPrice')
+    const orderFlow = this.dispatchForm.get('orderFlow')?.value
+    const priceDateSource = this.dispatchForm.get('priceDateSource')?.value
+    if (orderFlow === 'CROSS_DOCK' && priceDateSource === 'QUERY') {
+      externalPriceControl?.setValidators([Validators.required])
+    } else {
+      externalPriceControl?.clearValidators()
+      externalPriceControl?.updateValueAndValidity()
+    }
   }
 
   removeDeliveryOrder(index: number) {
@@ -396,7 +404,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
                 isKeepStock ? deliveryOrder.po.poNo : '',
                 isKeepStock ? deliveryOrder.shipment.shipmentNo : '',
                 isKeepStock ? deliveryOrder.po.orderType : '',
-                isKeepStock || priceDateSource == 'MANUAL' ? priceDate : barcodeCreatedDateMap.get(item.barcode)
+                isKeepStock || priceDateSource == 'MANUAL' ? priceDate : barcodeCreatedDateMap.get(item.barcode) ?? ''
               )
             );
           });
@@ -408,13 +416,24 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   }
 
   getBarcodeCreatedDateMap(): any {
+    const priceDateSource = this.dispatchForm.get('priceDateSource')?.value
     const externalPrices = JSON.parse(this.dispatchForm.get('externalPrice')?.value)
+
+    if (priceDateSource == 'MANUAL') {
+      return {}
+    }
+
+    if (!externalPrices) {
+      console.warn('externalPrices is null or undefined');
+      return new Map();
+    }
+
     return new Map<string, string>(
-      externalPrices.map((item: any) => {
+      (externalPrices ?? []).map((item: any) => {
         const formattedDate = new Date(item.createdDate).toISOString().slice(0, 10);
         return [item.barcode, formattedDate];
       })
-    )
+    );
   }
 
   getDetails(index: number): FormArray {
@@ -435,11 +454,13 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   }
 
   validateForm(): boolean {
+    console.log(this.dispatchForm)
     if (this.dispatchForm.invalid || this.toteForm.invalid) {
       this.dispatchForm.markAllAsTouched();
       if (this.dispatchForm.get('mode')?.value == 'CUSTOM_TOTE') {
         this.toteForm.markAllAsTouched();
       }
+      this.toastr.error('Invalid form', 'แจ้งเตือน');
       return true
     }
     return false
@@ -468,7 +489,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     }
   }
 
-  mapRowCsv(doNo: string,
+  mapRowCsv(shipmentNo:string,
+    doNo: string,
     barcode: string,
     pickQty: string,
     unit: string,
@@ -482,7 +504,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     currentDate: string): any[] {
     return [
       "01",
-      `SO-${doNo}`,
+      shipmentNo,
       doNo,
       barcode,
       (Number(pickQty ?? 0)).toFixed(2),
@@ -527,6 +549,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     const now = new Date()
     const currentDate = now.toISOString().split('T')[0]
     const expDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+    const storeCode =inputDeliveryOrders[0]?.po?.storeCode
+    const shipmentNo = `SO-${storeCode}-${this.dateUtils.generateCompactDateTime(now)}`
 
     if (itemCount > 0) {
       for (let i = 0; i < itemCount; i++) {
@@ -535,7 +559,9 @@ export class DispatchOrder implements OnInit, AfterViewInit {
         if (doItem.details) {
           for (let j = 0; j < doItem.details.length; j++) {
             const item = doItem.details[j]
-            rows.push(this.mapRowCsv(doItem.doNo,
+            rows.push(this.mapRowCsv(
+              shipmentNo,
+              doItem.doNo,
               doItem.barcode,
               item.pickQty,
               doItem.unit,
