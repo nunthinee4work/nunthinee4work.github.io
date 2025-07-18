@@ -34,7 +34,8 @@
 
   <div class="textarea-content" style="margin-top: 20px;">
     <label>Enter Shlef Code:</label>
-    <textarea formControlName="shelfCode" style="margin-top: 10px;"></textarea>
+    <textarea formControlName="shelfCode" style="margin-top: 10px;"
+    [class.is-invalid]="refillForm.get('shelfCode')?.invalid && refillForm.get('shelfCode')?.touched"></textarea>
   </div>
 
   <div class="mt-2">
