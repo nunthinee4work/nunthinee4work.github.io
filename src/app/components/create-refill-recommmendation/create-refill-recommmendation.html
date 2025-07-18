@@ -1,0 +1,52 @@
+<form [formGroup]="refillForm">
+  <h1>Create Refill Recommendation</h1>
+
+  <div class="form-group">
+    <label for="storeCode">Store Code:</label>
+    <input type="text" id="storeCode" formControlName="storeCode" placeholder="Enter store code"
+      [class.is-invalid]="refillForm.get('storeCode')?.invalid && refillForm.get('storeCode')?.touched">
+  </div>
+
+  <div class="form-group">
+    <label for="storeCode">Schedule Time:</label>
+    <input type="text" id="scheduleTime" formControlName="scheduleTime" placeholder="Enter schedule time"
+      [class.is-invalid]="refillForm.get('scheduleTime')?.invalid && refillForm.get('scheduleTime')?.touched">
+    <small class="mx-2">EX. 09:00,09:30 (ได้หลายรอบ ไม่ต้องใส่เว้นวรรค)</small>
+  </div>
+
+   <div class="form-group mb-3 mt-3">
+    <label for="refillType">Refill Type :</label>
+    <ng-select [items]="refillTypes" bindLabel="name" bindValue="id" placeholder="Select mode"
+      formControlName="refillType" class="custom-ng-select"
+      [class.is-invalid]="refillForm.get('refillType')?.invalid && refillForm.get('refillType')?.touched">
+    </ng-select>
+  </div>
+
+  <div class="radio-group">
+    <label style="margin-right: 13px;">Input Separator:</label>
+    <label>
+      <input type="radio" formControlName="inputSeparator" value="NEW_LINE" /> New Line
+    </label>
+    <label>
+      <input type="radio" formControlName="inputSeparator" value="COMMA" /> Comma
+    </label>
+  </div>
+
+  <div class="textarea-content" style="margin-top: 20px;">
+    <label>Enter Shlef Code:</label>
+    <textarea formControlName="shelfCode" style="margin-top: 10px;"></textarea>
+  </div>
+
+  <div class="mt-2">
+    <button class="btn btn-primary" type="button" (click)="createScriptRefillRecommendation()"
+      style="margin-right: 10px;">Processing</button>
+    <button class="btn btn-danger" type="button" (click)="clearFormatter()">Clear</button>
+  </div>
+
+  <hr style="margin-top: 30px;">
+
+  <h2>Script Create Refill Recommendation:
+    <app-copy-button [textToCopy]="sqlStatement"></app-copy-button>
+  </h2>
+  <pre class="payload-content" *ngIf="sqlStatement">{{ sqlStatement }}</pre>
+</form>

@@ -454,7 +454,6 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   }
 
   validateForm(): boolean {
-    console.log(this.dispatchForm)
     if (this.dispatchForm.invalid || this.toteForm.invalid) {
       this.dispatchForm.markAllAsTouched();
       if (this.dispatchForm.get('mode')?.value == 'CUSTOM_TOTE') {
