@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CopyButton } from '../../shared/copy-button/copy-button';
 import { NgSelectComponent } from '@ng-select/ng-select';
@@ -16,7 +16,7 @@ import { ToastrService } from 'ngx-toastr';
   templateUrl: './create-refill-recommmendation.html',
   styleUrl: './create-refill-recommmendation.scss'
 })
-export class CreateRefillRecommmendation {
+export class CreateRefillRecommmendation implements OnInit {
   refillForm!: FormGroup;
   sqlStatement = '';
 
@@ -33,6 +33,19 @@ export class CreateRefillRecommmendation {
       scheduleTime: ['', Validators.required],
       refillType: ['NORMAL', Validators.required]
     });
+  }
+  ngOnInit(): void {
+    this.refillForm.get('refillType')?.valueChanges.subscribe(refillType => {
+      const shelfCodeControl = this.refillForm.get('shelfCode');
+
+      if (refillType === 'NORMAL') {
+        shelfCodeControl?.setValidators([Validators.required])
+      } else {
+        shelfCodeControl?.clearValidators();
+      }
+
+      shelfCodeControl?.updateValueAndValidity();
+    })
   }
 
   createScriptRefillRecommendation() {
@@ -65,13 +78,24 @@ export class CreateRefillRecommmendation {
         return
       }
 
-      for (let j = 0; j < shelfCodes.length; j++) {
+      if (refillType == 'NORMAL') {
+        for (let j = 0; j < shelfCodes.length; j++) {
+          payload.push({
+            day: today,
+            code: storeCode,
+            time: scheduleTimes[i],
+            deadline: "23:30",
+            shelfCode: shelfCodes[j],
+            refillType: refillType,
+          })
+        }
+      } else {
         payload.push({
           day: today,
           code: storeCode,
           time: scheduleTimes[i],
           deadline: "23:30",
-          shelfCode: shelfCodes[j],
+          shelfCode: '',
           refillType: refillType,
         })
       }

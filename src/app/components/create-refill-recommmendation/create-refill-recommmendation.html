@@ -14,7 +14,7 @@
     <small class="mx-2">EX. 09:00,09:30 (ได้หลายรอบ ไม่ต้องใส่เว้นวรรค)</small>
   </div>
 
-   <div class="form-group mb-3 mt-3">
+  <div class="form-group mb-3 mt-3">
     <label for="refillType">Refill Type :</label>
     <ng-select [items]="refillTypes" bindLabel="name" bindValue="id" placeholder="Select mode"
       formControlName="refillType" class="custom-ng-select"
@@ -22,20 +22,22 @@
     </ng-select>
   </div>
 
-  <div class="radio-group">
-    <label style="margin-right: 13px;">Input Separator:</label>
-    <label>
-      <input type="radio" formControlName="inputSeparator" value="NEW_LINE" /> New Line
-    </label>
-    <label>
-      <input type="radio" formControlName="inputSeparator" value="COMMA" /> Comma
-    </label>
-  </div>
+  <div *ngIf="refillForm.value.refillType == 'NORMAL'">
+    <div class="radio-group">
+      <label style="margin-right: 13px;">Input Separator:</label>
+      <label>
+        <input type="radio" formControlName="inputSeparator" value="NEW_LINE" /> New Line
+      </label>
+      <label>
+        <input type="radio" formControlName="inputSeparator" value="COMMA" /> Comma
+      </label>
+    </div>
 
-  <div class="textarea-content" style="margin-top: 20px;">
-    <label>Enter Shlef Code:</label>
-    <textarea formControlName="shelfCode" style="margin-top: 10px;"
-    [class.is-invalid]="refillForm.get('shelfCode')?.invalid && refillForm.get('shelfCode')?.touched"></textarea>
+    <div class="textarea-content" style="margin-top: 20px;">
+      <label>Enter Shlef Code:</label>
+      <textarea formControlName="shelfCode" style="margin-top: 10px;"
+        [class.is-invalid]="refillForm.get('shelfCode')?.invalid && refillForm.get('shelfCode')?.touched"></textarea>
+    </div>
   </div>
 
   <div class="mt-2">
