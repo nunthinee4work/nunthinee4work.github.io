@@ -12,9 +12,9 @@ import { ToastrService } from 'ngx-toastr';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    NgSelectComponent,
-    CopyButton,
-    CodeBox
+    // NgSelectComponent,
+    // CopyButton,
+    // CodeBox
   ],
   templateUrl: './create-shelf.html',
   styleUrl: './create-shelf.scss'

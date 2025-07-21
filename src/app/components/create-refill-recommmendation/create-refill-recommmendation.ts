@@ -25,13 +25,22 @@ export class CreateRefillRecommmendation implements OnInit {
     { id: 'SPECIAL', name: 'Special' }
   ];
 
+  scheduleTimeTypes = [
+    { id: 'ALL_DAY', name: '09:00 - 18:00', value: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00'] },
+    { id: 'MORNING', name: '09:00 - 12:30', value: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30'] },
+    { id: 'AFTERNOON', name: '13:00 - 18:00', value: ['13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00'] },
+    { id: 'NIGHT', name: '18:30 - 23:30', value: ['18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30'] },
+    { id: 'CUSTOM', name: 'Custom' }
+  ];
+
   constructor(private fb: FormBuilder, private toastr: ToastrService) {
     this.refillForm = this.fb.group({
       inputSeparator: ['NEW_LINE'],
       shelfCode: ['', Validators.required],
       storeCode: ['', Validators.required],
-      scheduleTime: ['', Validators.required],
-      refillType: ['NORMAL', Validators.required]
+      scheduleTime: [''],
+      refillType: ['NORMAL', Validators.required],
+      scheduleTimeType: ['ALL_DAY', Validators.required]
     });
   }
   ngOnInit(): void {
@@ -45,6 +54,18 @@ export class CreateRefillRecommmendation implements OnInit {
       }
 
       shelfCodeControl?.updateValueAndValidity();
+    })
+
+    this.refillForm.get('scheduleTimeType')?.valueChanges.subscribe(scheduleTimeType => {
+      const scheduleTimeControl = this.refillForm.get('scheduleTime');
+
+      if (scheduleTimeType === 'CUSTOM') {
+        scheduleTimeControl?.setValidators([Validators.required])
+      } else {
+        scheduleTimeControl?.clearValidators();
+      }
+
+      scheduleTimeControl?.updateValueAndValidity();
     })
   }
 
@@ -60,7 +81,8 @@ export class CreateRefillRecommmendation implements OnInit {
       shelfCode,
       storeCode,
       scheduleTime,
-      refillType
+      refillType,
+      scheduleTimeType
     } = this.refillForm.value;
 
     const cleanString = shelfCode.replace(/["']/g, '');
@@ -68,7 +90,10 @@ export class CreateRefillRecommmendation implements OnInit {
       ? cleanString.split('\n').filter((line: any) => line.trim() !== '')
       : cleanString.split(',').map((s: any) => s.trim());
 
-    const scheduleTimes = scheduleTime.split(',').map((s: any) => s.trim())
+    const scheduleTimes = scheduleTimeType != 'CUSTOM' ?
+      this.scheduleTimeTypes.find(t => t.id === scheduleTimeType)?.value :
+      scheduleTime.split(',').map((s: any) => s.trim())
+
     const today = this.getTodayDayName()
     let payload: any[] = []
 
@@ -131,7 +156,8 @@ export class CreateRefillRecommmendation implements OnInit {
       shelfCode: '',
       storeCode: '',
       scheduleTime: '',
-      refillType: 'NORMAL'
+      refillType: 'NORMAL',
+      scheduleTimeType: 'ALL_DAY'
     });
     this.sqlStatement = '';
   }

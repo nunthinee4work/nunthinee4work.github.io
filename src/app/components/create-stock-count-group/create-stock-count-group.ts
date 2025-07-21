@@ -8,7 +8,7 @@ import { CopyButton } from '../../shared/copy-button/copy-button';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    CopyButton
+    // CopyButton
   ],
   templateUrl: './create-stock-count-group.html',
   styleUrl: './create-stock-count-group.scss'

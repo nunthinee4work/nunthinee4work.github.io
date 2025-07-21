@@ -7,7 +7,15 @@
       [class.is-invalid]="refillForm.get('storeCode')?.invalid && refillForm.get('storeCode')?.touched">
   </div>
 
-  <div class="form-group">
+  <div class="form-group mb-3 mt-3">
+    <label for="refillType">Schedule Time Type :</label>
+    <ng-select [items]="scheduleTimeTypes" bindLabel="name" bindValue="id" placeholder="Select mode"
+      formControlName="scheduleTimeType" class="custom-ng-select"
+      [class.is-invalid]="refillForm.get('scheduleTimeType')?.invalid && refillForm.get('scheduleTimeType')?.touched">
+    </ng-select>
+  </div>
+
+  <div *ngIf="refillForm.value.scheduleTimeType == 'CUSTOM'" class="form-group">
     <label for="storeCode">Schedule Time:</label>
     <input type="text" id="scheduleTime" formControlName="scheduleTime" placeholder="Enter schedule time"
       [class.is-invalid]="refillForm.get('scheduleTime')?.invalid && refillForm.get('scheduleTime')?.touched">
