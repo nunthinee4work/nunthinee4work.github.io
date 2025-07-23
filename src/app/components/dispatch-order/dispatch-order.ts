@@ -1038,7 +1038,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
     for (let i = 0; i < itemCount; i++) {
       const toteIndex = i < prefixToteSize ? i : Math.floor(Math.random() * prefixToteSize);
-      let toteId = `${prefixTotes[toteIndex]}${subfixToteCode}${String(runningRandomStart + i).padStart(4, '0')}`;
+      const prefixTote = prefixTotes[toteIndex]
+      let toteId = prefixTote.startsWith('PL') ? prefixTote : `${prefixTote}${subfixToteCode}${String(runningRandomStart + i).padStart(4, '0')}`;
       this.toteIdList.push(toteId);
     }
   }
