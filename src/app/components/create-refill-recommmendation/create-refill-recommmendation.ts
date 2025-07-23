@@ -85,7 +85,7 @@ export class CreateRefillRecommmendation implements OnInit {
       scheduleTimeType
     } = this.refillForm.value;
 
-    const cleanString = shelfCode.replace(/["']/g, '');
+    const cleanString = shelfCode.replace(/["'\t ]+/g, '');
     const shelfCodes = inputSeparator === 'NEW_LINE'
       ? cleanString.split('\n').filter((line: any) => line.trim() !== '')
       : cleanString.split(',').map((s: any) => s.trim());

@@ -80,8 +80,15 @@
     </div>
   </div>
 
-  <div *ngIf="dispatchForm.value.mode === 'RANDOM_TOTE'">
+  <div *ngIf="dispatchForm.value.mode === 'RANDOM_TOTE' || dispatchForm.value.mode === 'SPECIFY_TOTE'">
     <h3></h3>
+    <div *ngIf="dispatchForm.value.mode === 'SPECIFY_TOTE'" class="form-group">
+      <label for="specifyToteCode">Prefix Tote Code:</label>
+      <input type="text" id="specifyToteCode" formControlName="specifyToteCode" placeholder="Enter Tote Code"
+        [class.is-invalid]="dispatchForm.get('specifyToteCode')?.invalid && dispatchForm.get('specifyToteCode')?.touched">
+      <small class="form-text text-muted" style="margin-left: 10px;">เช่น TDS,TLS,TMS,TSS</small>
+    </div>
+
     <div class="form-group">
       <label for="subfixToteCode">Subfix Tote Code:</label>
       <input type="text" id="subfixToteCode" formControlName="subfixToteCode" placeholder="Enter Tote Code"
@@ -101,7 +108,11 @@
   </div>
 
   <div *ngIf="items.value.length > 0">
-    <h3>Tote Details</h3>
+    <div style="display: flex; align-items: center;">
+      <h3 style="margin: 0;">Tote Details</h3>
+      <button *ngIf="dispatchForm.value.mode === 'RANDOM_TOTE' || dispatchForm.value.mode === 'SPECIFY_TOTE'"
+        type="button" class="btn btn-secondary btn-sm mx-2" (click)="onPreviewToteDetail()">Re-Generate</button>
+    </div>
     <form [formGroup]="toteForm">
       <table class="table table-bordered">
         <thead>
@@ -144,7 +155,8 @@
                       <div class="col-7 d-flex align-items-center">
                         <input type="text" class="form-control" formControlName="toteId" placeholder="Tote ID"
                           [class.is-invalid]="d.get('toteId')?.invalid && d.get('toteId')?.touched" />
-                        <app-copy-button class="ms-2" [textToCopy]="d.get('toteId')?.value" [showIconOnly]="true"></app-copy-button>
+                        <app-copy-button class="ms-2" [textToCopy]="d.get('toteId')?.value"
+                          [showIconOnly]="true"></app-copy-button>
                       </div>
                       <div class="col-1" *ngIf="getDetails(i).length > 1">
                         <button type="button" class="btn btn-danger btn-sm" (click)="removeDetail(i, j)">–</button>

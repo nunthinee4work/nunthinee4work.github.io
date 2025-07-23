@@ -37,7 +37,8 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   modes = [
     { id: 'CUSTOM_TOTE', name: 'Custom Tote' },
     { id: 'RANDOM_TOTE', name: 'Random Tote' },
-    { id: 'SINGLE_TOTE', name: 'Single Tote' }
+    { id: 'SINGLE_TOTE', name: 'Single Tote' },
+    { id: 'SPECIFY_TOTE', name: 'Specify Tote' },
   ];
 
   orderFlows = [
@@ -154,6 +155,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
       orderFlow: [null, Validators.required],
       subfixToteCode: [''],
       startRunningNumber: [''],
+      specifyToteCode: [''],
       toteId: [''],
       platNo: ['Truck@Galaxy', Validators.required],
       driverName: ['Dominic Toretto', Validators.required],
@@ -169,6 +171,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
       const toteIdControl = this.dispatchForm.get('toteId');
       const subfixToteCodeControl = this.dispatchForm.get('subfixToteCode');
       const startRunningNumberControl = this.dispatchForm.get('startRunningNumber');
+      const specifyToteCodeControl = this.dispatchForm.get('specifyToteCode');
 
       if (mode === 'SINGLE_TOTE') {
         toteIdControl?.setValidators([Validators.required]);
@@ -178,12 +181,19 @@ export class DispatchOrder implements OnInit, AfterViewInit {
         subfixToteCodeControl?.setValidators([Validators.required]);
         startRunningNumberControl?.setValidators([Validators.required, Validators.min(1)]);
         toteIdControl?.clearValidators();
+      } else if (mode === 'SPECIFY_TOTE') {
+        specifyToteCodeControl?.setValidators([Validators.required]);
+        subfixToteCodeControl?.setValidators([Validators.required]);
+        startRunningNumberControl?.setValidators([Validators.required, Validators.min(1)]);
+        toteIdControl?.clearValidators();
       } else {
+        specifyToteCodeControl?.clearValidators();
         toteIdControl?.clearValidators();
         subfixToteCodeControl?.clearValidators();
         startRunningNumberControl?.clearValidators();
       }
 
+      specifyToteCodeControl?.updateValueAndValidity();
       toteIdControl?.updateValueAndValidity();
       subfixToteCodeControl?.updateValueAndValidity();
       startRunningNumberControl?.updateValueAndValidity();
@@ -356,11 +366,13 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     const deliveryItemSize = this.getTotalSizeFromDeliveryOrders()
     this.items.clear()
 
+    const specifyToteCode: number = this.dispatchForm.get('specifyToteCode')?.value;
     const subfixToteCode: number = this.dispatchForm.get('subfixToteCode')?.value;
     const startRunningNumber: number = this.dispatchForm.get('startRunningNumber')?.value;
     const toteId: number = this.dispatchForm.get('toteId')?.value;
 
     if (deliveryItemSize == 0
+      || mode == 'SPECIFY_TOTE' && (!subfixToteCode || !startRunningNumber || !specifyToteCode)
       || mode == 'RANDOM_TOTE' && (!subfixToteCode || !startRunningNumber)
       || mode == 'SIGNLE_TOTE' && !toteId
     ) {
@@ -383,12 +395,15 @@ export class DispatchOrder implements OnInit, AfterViewInit {
         if (mode == 'RANDOM_TOTE') {
           this.generateToteIdList(deliveryItemSize)
         }
+        else if (mode == 'SPECIFY_TOTE') {
+          this.generateSpecifyToteIdList(deliveryItemSize)
+        }
 
         if (items && Array.isArray(items)) {
           const barcodeCreatedDateMap = isKeepStock || priceDateSource == 'MANUAL' ? {} : this.getBarcodeCreatedDateMap()
           const priceDate = new Date().toISOString().slice(0, 10)
           items.forEach((item: any, index: number) => {
-            const toteId = mode == 'RANDOM_TOTE' ? this.toteIdList[index] : (mode == 'SINGLE_TOTE' ? this.dispatchForm.get('toteId')?.value : '')
+            const toteId = mode == 'RANDOM_TOTE' || mode == 'SPECIFY_TOTE' ? this.toteIdList[index] : (mode == 'SINGLE_TOTE' ? this.dispatchForm.get('toteId')?.value : '')
             this.items.push(
               this.createItem(
                 item.productName ?? '',
@@ -488,7 +503,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     }
   }
 
-  mapRowCsv(shipmentNo:string,
+  mapRowCsv(shipmentNo: string,
     doNo: string,
     barcode: string,
     pickQty: string,
@@ -548,7 +563,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     const now = new Date()
     const currentDate = now.toISOString().split('T')[0]
     const expDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
-    const storeCode =inputDeliveryOrders[0]?.po?.storeCode
+    const storeCode = inputDeliveryOrders[0]?.po?.storeCode
     const shipmentNo = `SO-${storeCode}-${this.dateUtils.generateCompactDateTime(now)}`
 
     if (itemCount > 0) {
@@ -811,8 +826,12 @@ export class DispatchOrder implements OnInit, AfterViewInit {
         }
       })
     } else {
-      if (mode == 'RANDOM_TOTE') {
-        this.generateToteIdList(itemCount)
+      if (mode == 'RANDOM_TOTE' || mode == 'SPECIFY_TOTE') {
+        if (mode == 'RANDOM_TOTE') {
+          this.generateToteIdList(itemCount)
+        } else if (mode == 'SPECIFY_TOTE') {
+          this.generateSpecifyToteIdList(itemCount)
+        }
         if (itemCount > 0) {
           this.items.clear()
 
@@ -1004,6 +1023,22 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     for (let i = 0; i < itemCount; i++) {
       const randomIndex = Math.floor(Math.random() * this.prefixToteList.length);
       let toteId = `${this.prefixToteList[randomIndex].code}${subfixToteCode}${String(runningRandomStart + i).padStart(4, '0')}`;
+      this.toteIdList.push(toteId);
+    }
+  }
+
+  generateSpecifyToteIdList(itemCount: number): void {
+    const specifyToteCodeRaw: string = this.dispatchForm.get('specifyToteCode')?.value
+    const subfixToteCode: string = this.dispatchForm.get('subfixToteCode')?.value
+    const runningRandomStart: number = this.dispatchForm.get('startRunningNumber')?.value
+    this.toteIdList = []
+
+    const prefixTotes = specifyToteCodeRaw.split(',').map((prefix) => prefix.trim())
+    const prefixToteSize = prefixTotes.length
+
+    for (let i = 0; i < itemCount; i++) {
+      const toteIndex = i < prefixToteSize ? i : Math.floor(Math.random() * prefixToteSize);
+      let toteId = `${prefixTotes[toteIndex]}${subfixToteCode}${String(runningRandomStart + i).padStart(4, '0')}`;
       this.toteIdList.push(toteId);
     }
   }
