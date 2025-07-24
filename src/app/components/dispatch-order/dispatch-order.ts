@@ -448,10 +448,14 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
   getBarcodeCreatedDateMap(): any {
     const priceDateSource = this.dispatchForm.get('priceDateSource')?.value
-    const externalPrices = JSON.parse(this.dispatchForm.get('externalPrice')?.value)
+    let externalPrices = JSON.parse(this.dispatchForm.get('externalPrice')?.value)
 
     if (priceDateSource == 'MANUAL') {
       return {}
+    }
+
+    if (externalPrices && !Array.isArray(externalPrices)) {
+      externalPrices = [externalPrices];
     }
 
     if (!externalPrices) {
