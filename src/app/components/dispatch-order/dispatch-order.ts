@@ -134,8 +134,24 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     { code: "TXT", nameTh: "ตะกร้าพลาสติกสีน้ำตาล", toteGroup: "12" },
     { code: "TXY", nameTh: "ตะกร้าพลาสติกสีเหลือง", toteGroup: "11" },
     { code: "TX", nameTh: "ลังกระดาษคาดสี", toteGroup: "17" },
-    { code: "TDO", nameTh: "คาดส้ม", toteGroup: "18" }
-  ];
+    { code: "TDO", nameTh: "คาดส้ม", toteGroup: "18" },
+    { code: "XLG", nameTh: "ลังแฟร์เขียว", toteGroup: "88" },
+    { code: "XLP", nameTh: "ลังแฟร์ชมพู", toteGroup: "89" },
+    { code: "XTR", nameTh: "ลังแฟร์แดง", toteGroup: "90" },
+    { code: "XSR", nameTh: "ลังแฟร์แดง", toteGroup: "90" },
+    { code: "XLR", nameTh: "ลังแฟร์แดง", toteGroup: "90" },
+    { code: "XSS", nameTh: "ลังแฟร์เทา", toteGroup: "91" },
+    { code: "XMB", nameTh: "ลังแฟร์น้ำเงิน", toteGroup: "92" },
+    { code: "XLB", nameTh: "ลังแฟร์น้ำเงิน", toteGroup: "92" },
+    { code: "XSY", nameTh: "ลังแฟร์เหลือง", toteGroup: "93" },
+    { code: "YMG", nameTh: "ตะกร้าแฟร์เขียว", toteGroup: "94" },
+    { code: "YSG", nameTh: "ตะกร้าแฟร์เขียว", toteGroup: "94" },
+    { code: "YMB", nameTh: "ตะกร้าแฟร์น้ำเงิน", toteGroup: "95" },
+    { code: "YMT", nameTh: "ตะกร้าแฟร์น้ำตาล", toteGroup: "96" },
+    { code: "PLR", nameTh: "พาเลทแฟร์แดง", toteGroup: "97" },
+    { code: "PLB", nameTh: "พาเลทแฟร์น้ำเงิน", toteGroup: "98" },
+    { code: "SLW", nameTh: "ชั้นวางแฟร์ขาว", toteGroup: "99" }
+  ]
 
   constructor(private fb: FormBuilder,
     private toastr: ToastrService
@@ -1039,7 +1055,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     for (let i = 0; i < itemCount; i++) {
       const toteIndex = i < prefixToteSize ? i : Math.floor(Math.random() * prefixToteSize);
       const prefixTote = prefixTotes[toteIndex]
-      let toteId = prefixTote.startsWith('PL') ? prefixTote : `${prefixTote}${subfixToteCode}${String(runningRandomStart + i).padStart(4, '0')}`;
+      let toteId = prefixTote == 'PL' ? prefixTote : `${prefixTote}${subfixToteCode}${String(runningRandomStart + i).padStart(4, '0')}`;
       this.toteIdList.push(toteId);
     }
   }
