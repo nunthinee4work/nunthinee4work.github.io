@@ -8,6 +8,7 @@ import { CreateStockCountRequest } from "./components/create-stock-count-request
 import { CreateStockCountGroup } from "./components/create-stock-count-group/create-stock-count-group";
 import { CreateShelf } from './components/create-shelf/create-shelf';
 import { CreateRefillRecommmendation } from './components/create-refill-recommmendation/create-refill-recommmendation';
+import { TDDispatchOrder } from './components/td-dispatch-order/td-dispatch-order';
 
 @Component({
   selector: 'app-root',
@@ -20,7 +21,8 @@ import { CreateRefillRecommmendation } from './components/create-refill-recommme
     CreateStockCountRequest,
     CreateStockCountGroup,
     CreateShelf,
-    CreateRefillRecommmendation
+    CreateRefillRecommmendation,
+    TDDispatchOrder
 ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -30,6 +32,7 @@ export class App {
 
   tabs = [
     { id: 'dispatchOrder', label: 'Dispatch Order' },
+    { id: 'tdDispatchOrder', label: 'Dispatch Order TD' },
     { id: 'createStockCountRequest', label: 'Stock Count Request' },
     { id: 'createStockCountGroup', label: 'Stock Count Group' },
     // { id: 'createShelf', label: 'Shelf' },
