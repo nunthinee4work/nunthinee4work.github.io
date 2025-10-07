@@ -1,0 +1,97 @@
+<form [formGroup]="productTagForm">
+  <h3>Generate Tag QR Code</h3>
+
+  <div class="form-group mb-3 mt-3">
+    <label for="type" class="text-red text-xl" style="font-size: 25px;">Type :</label>
+    <ng-select [items]="types" bindLabel="name" bindValue="id" placeholder="Select type" formControlName="type"
+      class="custom-ng-select"
+      [class.is-invalid]="productTagForm.get('type')?.invalid && productTagForm.get('type')?.touched">
+    </ng-select>
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR'">
+    <label for="articleNo">Article No:</label>
+    <input type="text" id="articleNo" formControlName="articleNo" placeholder="Enter Article No"
+      [class.is-invalid]="productTagForm.get('articleNo')?.invalid && productTagForm.get('articleNo')?.touched">
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
+    <label for="barcode">Barcode:</label>
+    <input type="text" id="barcode" formControlName="barcode" placeholder="Enter Barcode"
+      [class.is-invalid]="productTagForm.get('barcode')?.invalid && productTagForm.get('barcode')?.touched">
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
+    <label for="shelf">Shelf:</label>
+    <input type="text" id="shelf" formControlName="shelf" placeholder="Enter Shelf"
+      [class.is-invalid]="productTagForm.get('shelf')?.invalid && productTagForm.get('shelf')?.touched">
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR'">
+    <label for="masterId">Master Id:</label>
+    <input type="text" id="masterId" formControlName="masterId" placeholder="Enter MasterId"
+      [class.is-invalid]="productTagForm.get('masterId')?.invalid && productTagForm.get('masterId')?.touched">
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR'">
+    <label for="version">Version:</label>
+    <input type="text" id="version" formControlName="version" placeholder="Enter Version"
+      [class.is-invalid]="productTagForm.get('version')?.invalid && productTagForm.get('version')?.touched">
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
+    <label for="bayNo">Bay No:</label>
+    <input type="text" id="bayNo" formControlName="bayNo" placeholder="Enter Bay No"
+      [class.is-invalid]="productTagForm.get('bayNo')?.invalid && productTagForm.get('bayNo')?.touched">
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
+    <label for="bayLevel">Bay Level:</label>
+    <input type="text" id="bayLevel" formControlName="bayLevel" placeholder="Enter Bay Level"
+      [class.is-invalid]="productTagForm.get('bayLevel')?.invalid && productTagForm.get('bayLevel')?.touched">
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
+    <label for="bayOrder">Bay Order:</label>
+    <input type="text" id="bayOrder" formControlName="bayOrder" placeholder="Enter Bay Order"
+      [class.is-invalid]="productTagForm.get('bayOrder')?.invalid && productTagForm.get('bayOrder')?.touched">
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'PROMOTION' || productTagForm.value.type === 'RTC'">
+    <label for="docRefNo">Doc Ref No:</label>
+    <input type="text" id="docRefNo" formControlName="docRefNo" placeholder="Enter Doc Ref No"
+      [class.is-invalid]="productTagForm.get('docRefNo')?.invalid && productTagForm.get('docRefNo')?.touched">
+  </div>
+
+  <div class="form-group" *ngIf="productTagForm.value.type === 'RTC'">
+    <label for="expireDate">Expire Date:</label>
+    <input type="text" id="expireDate" formControlName="expireDate" placeholder="Enter Expire Date"
+      [class.is-invalid]="productTagForm.get('expireDate')?.invalid && productTagForm.get('expireDate')?.touched">
+    <span class="ms-2"> sample data : 2025-01-25 23:59:59.999 +0700</span>
+  </div>
+
+  <button type="button" class="btn btn-primary me-2" (click)="generateTagQRCode()">Generate QR Code</button>
+
+  <div id="qrContainer"></div>
+  <div *ngIf="qrText">
+    <span style="display: flex; align-items: center; gap: 8px;">
+      <div id="qrText">{{ qrText }}</div>
+      <app-copy-button [textToCopy]="qrText" [showIconOnly]="true"></app-copy-button>
+    </span>
+  </div>
+
+  <hr class="mt-3">
+  <h3>Phrase Product Tag Data</h3>
+  <div class="form-group">
+    <input type="text" style="width: 40em;" id="productTagData" formControlName="productTagData"
+      placeholder="Enter Product Tag Data"
+      [class.is-invalid]="productTagForm.get('productTagData')?.invalid && productTagForm.get('productTagData')?.touched">
+  </div>
+
+  <button type="button" class="btn btn-primary me-2" (click)="phraseProductTag()">Phrase</button>
+
+  <div *ngIf="phraseResult && productTagForm.value.productTagData ">
+    <h5 class="mt-3">Result</h5>
+    <app-code-box [codeText]="phraseResult"></app-code-box>
+  </div>
+</form>

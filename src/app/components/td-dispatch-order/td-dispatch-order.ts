@@ -146,7 +146,7 @@ export class TDDispatchOrder implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const modalElement = document.getElementById('totePreviewModal');
+    const modalElement = document.getElementById('totePreviewTDModal');
     if (modalElement) {
       this.modal = new bootstrap.Modal(modalElement);
     }
@@ -481,7 +481,6 @@ export class TDDispatchOrder implements OnInit, AfterViewInit {
     const mode = dispatchFormData.mode
 
     const inputDeliveryOrders = this.getInputDeliveryOrderList()
-    console.log(inputDeliveryOrders)
     const now = new Date()
     const currentDate = now.toISOString().split('T')[0]
     const expDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
