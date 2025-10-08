@@ -30,7 +30,7 @@ import { ProductTag } from './components/product-tag/product-tag';
   styleUrl: './app.scss'
 })
 export class App {
-  activeTab = 'productTag';
+  activeTab = 'dispatchOrder';
 
   tabs = [
     { id: 'dispatchOrder', label: 'Dispatch Order' },
