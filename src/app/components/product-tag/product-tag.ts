@@ -43,7 +43,7 @@ export class ProductTag {
       type: [null, Validators.required],
       articleNo: ['', Validators.required],
       barcode: ['', Validators.required],
-      shelf: [''],
+      shelfNo: [''],
       masterId: ['', Validators.required],
       version: ['', Validators.required],
       bayNo: [''],
@@ -61,7 +61,7 @@ export class ProductTag {
       const versionControl = this.productTagForm.get('version');
       const docRefNoControl = this.productTagForm.get('docRefNo');
       const expireDateControl = this.productTagForm.get('expireDate');
-      const shelfControl = this.productTagForm.get('shelf');
+      const shelfControl = this.productTagForm.get('shelfNo');
 
       if (type === 'REGULAR') {
         articleNoControl?.setValidators([Validators.required]);
@@ -131,7 +131,7 @@ export class ProductTag {
     this.appendText(sb, QrCodeDescription.PRODUCT_TAG_TYPE, "01");
     this.appendText(sb, QrCodeDescription.ARTICLE_NO, data.articleNo);
     this.appendText(sb, QrCodeDescription.BARCODE, data.barcode);
-    this.appendText(sb, QrCodeDescription.SHELF_NO, data.shelf);
+    this.appendText(sb, QrCodeDescription.SHELF_NO, data.shelfNo);
     this.appendText(sb, QrCodeDescription.MASTER_ID, data.masterId.toString());
     this.appendText(sb, QrCodeDescription.VERSION, data.version.toString());
     this.appendText(sb, QrCodeDescription.BAY_INFO, this.buildBayInfo(data.bayNo, data.bayLevel, data.locationId));
@@ -145,7 +145,7 @@ export class ProductTag {
     this.appendText(sb, QrCodeDescription.PRODUCT_TAG_TYPE, "02");
     this.appendText(sb, QrCodeDescription.BARCODE, data.barcode);
     this.appendText(sb, QrCodeDescription.DOC_REF_NO, data.docRefNo);
-    this.appendText(sb, QrCodeDescription.SHELF_NO, data.shelf);
+    this.appendText(sb, QrCodeDescription.SHELF_NO, data.shelfNo);
     this.appendText(sb, QrCodeDescription.BAY_INFO, this.buildBayInfo(data.bayNo, data.bayLevel, data.locationId));
 
     return sb.join("");
@@ -196,7 +196,6 @@ export class ProductTag {
     if (this.productTagForm.invalid || this.productTagForm.invalid) {
       this.productTagForm.markAllAsTouched();
       this.toastr.error('Invalid form', 'แจ้งเตือน');
-      console.log(this.productTagForm)
       return true
     }
     return false
@@ -214,13 +213,64 @@ export class ProductTag {
     const formData = this.productTagForm.value;
     const manager = new BarcodeScanValidateManager();
     this.phraseResult = manager.validateBarcode(formData.productTagData);
+
+    const mapping: Record<string, string> = {
+      type: 'type',
+      articleNo: 'articleNo',
+      barcode: 'barcode',
+      masterId: 'masterId',
+      version: 'version',
+      bayNo: 'bayNo',
+      bayLevel: 'bayLevel',
+      locationId: 'locationId',
+      shelfNo: 'shelfNo',
+      promotionNo: 'docRefNo',
+      rtcUniqueCode: 'docRefNo',
+    };
+
+    Object.entries(mapping).forEach(([jsonKey, formKey]) => {
+      let value = this.phraseResult?.[jsonKey];
+
+      if (jsonKey === 'type') {
+        value = this.mapType(value);
+      }
+
+      this.productTagForm.get(formKey)?.setValue(value);
+    });
+
+    // handle expireDate separately
+    this.productTagForm
+      .get('expireDate')
+      ?.setValue(this.convertExpireDate(this.phraseResult?.expireDate));
+  }
+
+  mapType(type: string): string | null {
+    if (!type) {
+      return null;
+    }
+    return type === 'REDUCE_TO_CLEAR' ? 'RTC' : type;
+  }
+
+  convertExpireDate(value?: string): string | null {
+    if (!value || value.length !== 14) {
+      return null;
+    }
+
+    const day = value.substring(0, 2);
+    const month = value.substring(2, 4);
+    const year = value.substring(4, 8);
+    const hour = value.substring(8, 10);
+    const minute = value.substring(10, 12);
+    const second = value.substring(12, 14);
+
+    return `${year}-${month}-${day} ${hour}:${minute}:${second}.999 +0700`;
   }
 }
 
 export interface PriceTagPrintProjection {
   articleNo: string;
   barcode: string;
-  shelf: string;
+  shelfNo: string;
   masterId: number | string;
   version: number | string;
   bayNo?: string;

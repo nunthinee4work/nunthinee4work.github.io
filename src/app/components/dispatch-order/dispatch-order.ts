@@ -42,7 +42,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
   ];
 
   orderFlows = [
-    { id: 'KEEP_STOCK', name: 'Keep Stock' },
+    { id: 'KEEP_STOCK', name: 'Keep Stock (Bug !!)' },
     { id: 'CROSS_DOCK', name: 'Cross Dock' }
   ];
 
@@ -432,9 +432,9 @@ export class DispatchOrder implements OnInit, AfterViewInit {
                 doNo,
                 deliveryDate,
                 pickDate,
-                isKeepStock ? deliveryOrder.po.poNo : '',
-                isKeepStock ? deliveryOrder.shipment.shipmentNo : '',
-                isKeepStock ? deliveryOrder.po.orderType : '',
+                isKeepStock ? deliveryOrder?.po.poNo : '', //TODO TD change ?
+                isKeepStock ? deliveryOrder?.shipment?.shipmentNo : '',
+                isKeepStock ? deliveryOrder?.po?.orderType : '',
                 isKeepStock || priceDateSource == 'MANUAL' ? priceDate : barcodeCreatedDateMap.get(item.barcode) ?? ''
               )
             );

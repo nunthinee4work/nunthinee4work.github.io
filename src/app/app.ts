@@ -33,8 +33,8 @@ export class App {
   activeTab = 'dispatchOrder';
 
   tabs = [
-    { id: 'dispatchOrder', label: 'Dispatch Order' },
-    { id: 'tdDispatchOrder', label: 'Dispatch Order TD' },
+    { id: 'dispatchOrder', label: 'CJX Dispatch Order' },
+    { id: 'tdDispatchOrder', label: 'TD Dispatch Order' },
     { id: 'createStockCountRequest', label: 'Stock Count Request' },
     { id: 'productTag', label: 'Check Product Tag' },
     // { id: 'createStockCountGroup', label: 'Stock Count Group' },

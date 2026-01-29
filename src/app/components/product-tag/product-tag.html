@@ -22,44 +22,55 @@
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
-    <label for="shelf">Shelf Id:</label>
-    <input type="text" id="shelf" formControlName="shelf" placeholder="Enter Shelf"
-      [class.is-invalid]="productTagForm.get('shelf')?.invalid && productTagForm.get('shelf')?.touched">
+    <label for="shelfNo">Shelf No:</label>
+    <input type="text" id="shelfNo" formControlName="shelfNo" placeholder="Enter shelfNo"
+      [class.is-invalid]="productTagForm.get('shelfNo')?.invalid && productTagForm.get('shelfNo')?.touched">
+    <span class="ms-2 d-inline-block">If the shelfCode is 0001-00095, the shelfNo is 0001</span>
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR'">
     <label for="masterId">Master Id:</label>
     <input type="text" id="masterId" formControlName="masterId" placeholder="Enter MasterId"
       [class.is-invalid]="productTagForm.get('masterId')?.invalid && productTagForm.get('masterId')?.touched">
+    <span class="ms-2 d-inline-block">Lookup this field in <b>pos_mgr.price_tag_master >> id</b></span>
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR'">
     <label for="version">Version:</label>
     <input type="text" id="version" formControlName="version" placeholder="Enter Version"
       [class.is-invalid]="productTagForm.get('version')?.invalid && productTagForm.get('version')?.touched">
+    <span class="ms-2 d-inline-block">Lookup this field in <b>pos_mgr.price_tag_master >> master_version</b></span>
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
     <label for="bayNo">Bay No:</label>
     <input type="text" id="bayNo" formControlName="bayNo" placeholder="Enter Bay No"
       [class.is-invalid]="productTagForm.get('bayNo')?.invalid && productTagForm.get('bayNo')?.touched">
+      <span class="ms-2 d-inline-block">Lookup this field in Nest > Store Assortment</span>
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
     <label for="bayLevel">Bay Level:</label>
     <input type="text" id="bayLevel" formControlName="bayLevel" placeholder="Enter Bay Level"
       [class.is-invalid]="productTagForm.get('bayLevel')?.invalid && productTagForm.get('bayLevel')?.touched">
+      <span class="ms-2 d-inline-block">Lookup this field in Nest > Store Assortment</span>
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
     <label for="locationId">location Id:</label>
     <input type="text" id="locationId" formControlName="locationId" placeholder="Enter Location Id"
       [class.is-invalid]="productTagForm.get('locationId')?.invalid && productTagForm.get('locationId')?.touched">
+      <span class="ms-2 d-inline-block">Lookup this field in Nest > Store Assortment</span>
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'PROMOTION' || productTagForm.value.type === 'RTC'">
-    <label for="docRefNo">Doc Ref No:</label>
-    <input type="text" id="docRefNo" formControlName="docRefNo" placeholder="Enter Doc Ref No"
+    <label for="docRefNo">{{ productTagForm.value.type === 'PROMOTION'? 'Promotion No': 'RTC Unique Code' }}</label>
+    <input type="text" id="docRefNo" formControlName="docRefNo" 
+    [placeholder]="productTagForm.value.type === 'PROMOTION'
+    ? 'Enter Promotion No'
+    : productTagForm.value.type === 'RTC'
+      ? 'Enter RTC Unique Code'
+      : 'Enter Doc Ref No'"
       [class.is-invalid]="productTagForm.get('docRefNo')?.invalid && productTagForm.get('docRefNo')?.touched">
   </div>
 
