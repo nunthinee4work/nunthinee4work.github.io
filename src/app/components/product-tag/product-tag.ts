@@ -48,7 +48,7 @@ export class ProductTag {
       version: ['', Validators.required],
       bayNo: [''],
       bayLevel: [''],
-      bayOrder: [''],
+      locationId: [''],
       docRefNo: [''],
       expireDate: [''],
       productTagData: [''],
@@ -117,12 +117,12 @@ export class ProductTag {
   buildBayInfo(
     bayNo?: string | null,
     bayLevel?: string | null,
-    bayOrder?: string | null
+    locationId?: string | null
   ): string | null {
-    if (!bayNo || !bayLevel || bayOrder == null) {
+    if (!bayNo || !bayLevel || locationId == null) {
       return null;
     }
-    return `${bayNo},${bayLevel},${bayOrder}`;
+    return `${bayNo},${bayLevel},${locationId}`;
   }
 
   generateRegularTag(data: PriceTagPrintProjection): string {
@@ -134,7 +134,7 @@ export class ProductTag {
     this.appendText(sb, QrCodeDescription.SHELF_NO, data.shelf);
     this.appendText(sb, QrCodeDescription.MASTER_ID, data.masterId.toString());
     this.appendText(sb, QrCodeDescription.VERSION, data.version.toString());
-    this.appendText(sb, QrCodeDescription.BAY_INFO, this.buildBayInfo(data.bayNo, data.bayLevel, data.bayOrder));
+    this.appendText(sb, QrCodeDescription.BAY_INFO, this.buildBayInfo(data.bayNo, data.bayLevel, data.locationId));
 
     return sb.join("");
   }
@@ -146,7 +146,7 @@ export class ProductTag {
     this.appendText(sb, QrCodeDescription.BARCODE, data.barcode);
     this.appendText(sb, QrCodeDescription.DOC_REF_NO, data.docRefNo);
     this.appendText(sb, QrCodeDescription.SHELF_NO, data.shelf);
-    this.appendText(sb, QrCodeDescription.BAY_INFO, this.buildBayInfo(data.bayNo, data.bayLevel, data.bayOrder));
+    this.appendText(sb, QrCodeDescription.BAY_INFO, this.buildBayInfo(data.bayNo, data.bayLevel, data.locationId));
 
     return sb.join("");
   }
@@ -225,7 +225,7 @@ export interface PriceTagPrintProjection {
   version: number | string;
   bayNo?: string;
   bayLevel?: string;
-  bayOrder?: string;
+  locationId?: string;
   docRefNo?: string;
   expireDate: string;
 }
@@ -280,7 +280,7 @@ export interface ScanValidateModel {
   expireDate?: string;
   bayNo?: string;
   bayLevel?: string;
-  bayOrder?: string;
+  locationId?: string;
   plainText?: string;
 }
 
@@ -310,7 +310,7 @@ export class BarcodeScanValidateManager {
     const productTag = result?.[QrCodeDescription.PRODUCT_TAG_TYPE] || null;
 
     const bayInfo = result?.[QrCodeDescription.BAY_INFO] || "";
-    const [bayNo, bayLevel, bayOrder] = bayInfo ? bayInfo.split(",") : ["", "", ""];
+    const [bayNo, bayLevel, locationId] = bayInfo ? bayInfo.split(",") : ["", "", ""];
 
     if (productTag === BarcodeScanTagType.REGULAR.tagCode) {
       return {
@@ -325,7 +325,7 @@ export class BarcodeScanValidateManager {
         shelfLabel: result?.[QrCodeDescription.SHELF_LABEL] || "",
         bayNo: bayNo || "",
         bayLevel: bayLevel || "",
-        bayOrder: bayOrder || "",
+        locationId: locationId || "",
       };
     } else if (productTag === BarcodeScanTagType.PROMOTION.tagCode) {
       return {
@@ -336,7 +336,7 @@ export class BarcodeScanValidateManager {
         shelfLabel: result?.[QrCodeDescription.SHELF_LABEL] || "",
         bayNo: bayNo || "",
         bayLevel: bayLevel || "",
-        bayOrder: bayOrder || "",
+        locationId: locationId || "",
       };
     } else if (productTag === BarcodeScanTagType.REDUCE_TO_CLEAR.tagCode) {
       return {

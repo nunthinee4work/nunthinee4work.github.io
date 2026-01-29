@@ -22,7 +22,7 @@
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
-    <label for="shelf">Shelf:</label>
+    <label for="shelf">Shelf Id:</label>
     <input type="text" id="shelf" formControlName="shelf" placeholder="Enter Shelf"
       [class.is-invalid]="productTagForm.get('shelf')?.invalid && productTagForm.get('shelf')?.touched">
   </div>
@@ -52,9 +52,9 @@
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
-    <label for="bayOrder">Bay Order:</label>
-    <input type="text" id="bayOrder" formControlName="bayOrder" placeholder="Enter Bay Order"
-      [class.is-invalid]="productTagForm.get('bayOrder')?.invalid && productTagForm.get('bayOrder')?.touched">
+    <label for="locationId">location Id:</label>
+    <input type="text" id="locationId" formControlName="locationId" placeholder="Enter Location Id"
+      [class.is-invalid]="productTagForm.get('locationId')?.invalid && productTagForm.get('locationId')?.touched">
   </div>
 
   <div class="form-group" *ngIf="productTagForm.value.type === 'PROMOTION' || productTagForm.value.type === 'RTC'">
