@@ -552,11 +552,11 @@ export class DispatchOrder implements OnInit, AfterViewInit {
       plateNo,
       "",
       `LD${this.dateUtils.generateCompactDateTime(new Date())}`,
-      priceDate === null || priceDate === '' ? 'YYYY-MM-DD' : priceDate,
-      expDate,
-      currentDate,
-      currentDate,
-      `LTEST-${doNo.split('-').slice(1).join('-')}`
+      priceDate === null || priceDate === '' ? 'YYYY-MM-DD' : priceDate //,
+      // expDate,
+      // currentDate,
+      // currentDate,
+      // `LTEST-${doNo.split('-').slice(1).join('-')}`
     ]
   }
 
@@ -708,7 +708,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
     const headers: string[] = [
       "01", "shipmentNo", "doNo", "barcode", "pickedQty", "uom", "toteId", "deliverydate",
       "pickupdate", "couriercode", "couriername", "drivername", "truckId", "plateno",
-      "loadingNo", "priceDate", "expDate", "mfgDate", "recDate", "lotNo"
+      "loadingNo", "priceDate" //, "expDate", "mfgDate", "recDate", "lotNo"
     ];
 
     const rows: (string | number)[][] = [];
