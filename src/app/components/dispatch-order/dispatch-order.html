@@ -8,14 +8,14 @@
     <button type="button" class="btn btn-outline-primary" (click)="openModal()">Show Tote Codes</button>
   </div>
 
-  <div class="form-group mb-3 mt-3">
+  <!-- <div class="form-group mb-3 mt-3">
     <label for="orderFlow" class="text-red text-xl" style="font-size: 25px;">Order Flow :</label>
     <ng-select [items]="orderFlows" bindLabel="name" bindValue="id" placeholder="Select mode"
       formControlName="orderFlow" class="custom-ng-select"
       [class.is-invalid]="dispatchForm.get('orderFlow')?.invalid && dispatchForm.get('orderFlow')?.touched"
       (change)="onChangedOrderFlow()">
     </ng-select>
-  </div>
+  </div> -->
 
   <div class="form-group mb-3 mt-3">
     <label for="mode" class="text-red text-xl" style="font-size: 25px;">Mode :</label>

@@ -168,7 +168,7 @@ export class DispatchOrder implements OnInit, AfterViewInit {
         })
       ]),
       mode: [null, Validators.required],
-      orderFlow: [null, Validators.required],
+      orderFlow: ['CROSS_DOCK', Validators.required],
       subfixToteCode: [''],
       startRunningNumber: [''],
       specifyToteCode: [''],
@@ -397,10 +397,11 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
     inputDeliveryOrders.forEach((deliveryOrder: any) => {
       if (deliveryOrder && Array.isArray(deliveryOrder.items)) {
-        if ((orderFlow == 'KEEP_STOCK' && deliveryOrder.orderFlow != 'KEEP_STOCK') || (orderFlow == 'CROSS_DOCK' && deliveryOrder.orderFlow != 'CROSS_DOCK')) {
-          this.toastr.error('Invalid delivery order structure: mismatched order flow type', 'แจ้งเตือน');
-          return;
-        }
+        //TODO ignore check orderFlow type
+        // if ((orderFlow == 'KEEP_STOCK' && deliveryOrder.orderFlow != 'KEEP_STOCK') || (orderFlow == 'CROSS_DOCK' && deliveryOrder.orderFlow != 'CROSS_DOCK')) {
+        //   this.toastr.error('Invalid delivery order structure: mismatched order flow type', 'แจ้งเตือน');
+        //   return;
+        // }
 
         const items = deliveryOrder.items;
         const doNo = deliveryOrder.doNo
