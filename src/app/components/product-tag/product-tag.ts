@@ -183,6 +183,9 @@ export class ProductTag {
       return;
     }
 
+    const manager = new BarcodeScanValidateManager();
+    this.phraseResult = manager.validateBarcode(this.qrText);
+
     const qrDataUrl = await generateQRCode(this.qrText);
     if (qrDiv) {
       qrDiv.innerHTML = "";
@@ -235,7 +238,10 @@ export class ProductTag {
         value = this.mapType(value);
       }
 
-      this.productTagForm.get(formKey)?.setValue(value);
+      if (value) {
+        this.productTagForm.get(formKey)?.setValue(value);
+      }
+
     });
 
     // handle expireDate separately
