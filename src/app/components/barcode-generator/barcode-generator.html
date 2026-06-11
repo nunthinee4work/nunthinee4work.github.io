@@ -1,0 +1,31 @@
+<div [formGroup]="form">
+
+  <h2>Barcode Generator</h2>
+
+  <textarea rows="10" formControlName="inputBarcodes" class="input-area" placeholder="e.g.
+8858851604234
+8850987128400
+
+โค้ก 8858851604234 S
+แปบซี่ 8858851604888 L">
+  </textarea>
+
+  <br><br>
+
+  <button class="btn btn-primary me-2" (click)="showBarcodes()">Generate Barcodes</button>
+
+  <hr>
+
+  <div class="barcode-container">
+    <div class="barcode-item" *ngFor="let item of barcodes">
+      <div class="barcode-card">
+        <app-copy-button [textToCopy]="item.barcode"></app-copy-button>
+        <svg #barcodeSvg></svg>
+
+        <div class="detail" *ngIf="item.barSize">
+          {{ item.productName }} ({{ item.barSize }})
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

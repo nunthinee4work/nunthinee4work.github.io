@@ -10,6 +10,7 @@ import { CreateShelf } from './components/create-shelf/create-shelf';
 import { CreateRefillRecommmendation } from './components/create-refill-recommmendation/create-refill-recommmendation';
 import { TDDispatchOrder } from './components/td-dispatch-order/td-dispatch-order';
 import { ProductTag } from './components/product-tag/product-tag';
+import { BarcodeGenerator } from './components/barcode-generator/barcode-generator';
 
 @Component({
   selector: 'app-root',
@@ -24,7 +25,8 @@ import { ProductTag } from './components/product-tag/product-tag';
     CreateShelf,
     CreateRefillRecommmendation,
     TDDispatchOrder,
-    ProductTag
+    ProductTag,
+    BarcodeGenerator,
 ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -44,6 +46,7 @@ export class App {
     { id: 'thaiLocaleCompare', label: 'Thai Locale Compare' },
     { id: 'unicodeConverter', label: 'Unicode Converter' },
     { id: 'arrayFormatter', label: 'Array Formatter' },
+    { id: 'barcodeGenerator', label: 'Barcode Generator' },
     // { id: 'removeDashesAndEmptyLines', label: 'Remove Dashes and Empty Lines' },
   ];
 
