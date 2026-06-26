@@ -11,6 +11,7 @@ import { CreateRefillRecommmendation } from './components/create-refill-recommme
 import { TDDispatchOrder } from './components/td-dispatch-order/td-dispatch-order';
 import { ProductTag } from './components/product-tag/product-tag';
 import { BarcodeGenerator } from './components/barcode-generator/barcode-generator';
+import { Product } from './components/product/product';
 
 @Component({
   selector: 'app-root',
@@ -27,6 +28,7 @@ import { BarcodeGenerator } from './components/barcode-generator/barcode-generat
     TDDispatchOrder,
     ProductTag,
     BarcodeGenerator,
+    Product
 ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -47,6 +49,7 @@ export class App {
     { id: 'unicodeConverter', label: 'Unicode Converter' },
     { id: 'arrayFormatter', label: 'Array Formatter' },
     { id: 'barcodeGenerator', label: 'Barcode Generator' },
+    { id: 'createProduct', label: 'New Product' },
     // { id: 'removeDashesAndEmptyLines', label: 'Remove Dashes and Empty Lines' },
   ];
 

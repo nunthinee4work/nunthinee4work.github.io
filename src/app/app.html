@@ -5,21 +5,57 @@
     </div>
   </div>
 
-  <div class="tab-content active">
-    <div id="content-area">
-      <ng-container [ngSwitch]="activeTab">
-        <app-dispatch-order *ngSwitchCase="'dispatchOrder'"></app-dispatch-order>
-        <app-td-dispatch-order *ngSwitchCase="'tdDispatchOrder'"></app-td-dispatch-order>
-        <app-thai-locale-compare *ngSwitchCase="'thaiLocaleCompare'"></app-thai-locale-compare>
-        <app-array-formatter *ngSwitchCase="'arrayFormatter'"></app-array-formatter>
-        <app-unicode-converter *ngSwitchCase="'unicodeConverter'"></app-unicode-converter>
-        <app-create-stock-count-request *ngSwitchCase="'createStockCountRequest'"></app-create-stock-count-request>
-        <app-create-stock-count-group *ngSwitchCase="'createStockCountGroup'"></app-create-stock-count-group>
-        <app-create-shelf *ngSwitchCase="'createShelf'"></app-create-shelf>
-        <app-create-refill-recommmendation *ngSwitchCase="'createRefillRecommmendation'"></app-create-refill-recommmendation>
-        <app-product-tag *ngSwitchCase="'productTag'"></app-product-tag>
-        <app-barcode-generator *ngSwitchCase="'barcodeGenerator'"></app-barcode-generator>
-      </ng-container>
-    </div>
+<div class="tab-content active">
+  <div id="content-area">
+    @switch (activeTab) {
+      @case ('dispatchOrder') {
+        <app-dispatch-order />
+      }
+
+      @case ('tdDispatchOrder') {
+        <app-td-dispatch-order />
+      }
+
+      @case ('thaiLocaleCompare') {
+        <app-thai-locale-compare />
+      }
+
+      @case ('arrayFormatter') {
+        <app-array-formatter />
+      }
+
+      @case ('unicodeConverter') {
+        <app-unicode-converter />
+      }
+
+      @case ('createStockCountRequest') {
+        <app-create-stock-count-request />
+      }
+
+      @case ('createStockCountGroup') {
+        <app-create-stock-count-group />
+      }
+
+      @case ('createShelf') {
+        <app-create-shelf />
+      }
+
+      @case ('createRefillRecommmendation') {
+        <app-create-refill-recommmendation />
+      }
+
+      @case ('productTag') {
+        <app-product-tag />
+      }
+
+      @case ('barcodeGenerator') {
+        <app-barcode-generator />
+      }
+      
+      @case ('createProduct') {
+        <app-product />
+      }
+    }
   </div>
+</div>
 </div>

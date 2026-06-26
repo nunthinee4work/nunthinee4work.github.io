@@ -1,0 +1,44 @@
+ng-select {
+  width: 500px;
+}
+
+.payload-header {
+  cursor: pointer;
+  display: inline-block;
+}
+
+.block .payload-box {
+  display: none;
+}
+
+/* Curl default open */
+#toggleCurl:checked ~ .payload-box {
+  display: block;
+}
+
+/* Payload default closed (unchecked = hidden) */
+#togglePayload ~ .payload-box {
+  display: none;
+}
+
+#togglePayload:checked ~ .payload-box {
+  display: block;
+}
+
+/* triangle */
+.triangle {
+  width: 0;
+  height: 0;
+  margin-right: 8px;
+
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid #333;
+
+  transition: transform 0.2s ease;
+}
+
+#toggleCurl:checked + .payload-header .triangle,
+#togglePayload:checked + .payload-header .triangle {
+  transform: rotate(90deg);
+}
