@@ -792,7 +792,7 @@ export class Product {
     const request = this.buildRequest();
 
     this.curlRequest = `
-curl --location '{{cjx-api}/tdproducts/requests/submit' \
+curl --location '{{cjx-api}}/tdproducts/requests/submit' \
 --header 'x-host: product.api.tdtech.app' \
 --header 'Content-Type: application/json' \
 --data '${JSON.stringify(request, null, 2)}'
