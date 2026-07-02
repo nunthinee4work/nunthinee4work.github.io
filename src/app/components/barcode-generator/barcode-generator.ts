@@ -23,7 +23,7 @@ interface BarcodeItem {
     CommonModule,
     ReactiveFormsModule,
     CopyButton
-],
+  ],
   templateUrl: './barcode-generator.html',
   styleUrls: ['./barcode-generator.scss']
 })
@@ -42,10 +42,30 @@ export class BarcodeGenerator implements AfterViewInit {
       inputBarcodes: ['']
     });
 
+    this.form.get('inputBarcodes')?.valueChanges.subscribe(value => {
+      localStorage.setItem('barcodeInput', value ?? '');
+    });
+
+  }
+
+  ngOnInit(): void {
+    const savedBarcodes = localStorage.getItem('barcodes');
+    const savedInput = localStorage.getItem('barcodeInput');
+
+    if (savedInput) {
+      this.form.patchValue({
+        inputBarcodes: savedInput
+      });
+    }
+
+    if (savedBarcodes) {
+      this.barcodes = JSON.parse(savedBarcodes);
+    }
   }
 
   ngAfterViewInit() {
-
+    this.renderBarcodes();
+    
     this.barcodeSvgs.changes.subscribe(() => {
       this.renderBarcodes();
     });
@@ -78,6 +98,9 @@ export class BarcodeGenerator implements AfterViewInit {
 
       });
 
+    localStorage.setItem('barcodes', JSON.stringify(this.barcodes));
+    localStorage.setItem('barcodeInput', input);
+
   }
 
   private renderBarcodes(): void {
@@ -98,4 +121,12 @@ export class BarcodeGenerator implements AfterViewInit {
 
   }
 
+  clear(): void {
+    this.form.reset();
+
+    this.barcodes = [];
+
+    localStorage.removeItem('barcodes');
+    localStorage.removeItem('barcodeInput');
+  }
 }
