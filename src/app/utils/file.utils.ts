@@ -1,7 +1,11 @@
 export class FileUtils {
   /** Triggers a browser download of `content` as a file. */
   static download(content: string, fileName: string, mimeType = 'text/plain') {
-    const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+    FileUtils.downloadBlob(new Blob([content], { type: `${mimeType};charset=utf-8` }), fileName);
+  }
+
+  /** Triggers a browser download of a binary blob (e.g. a resized image). */
+  static downloadBlob(blob: Blob, fileName: string) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

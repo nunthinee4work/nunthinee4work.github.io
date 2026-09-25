@@ -1,0 +1,93 @@
+<div class="calculator">
+  @if (!embedded) {
+    <h1>Calculator</h1>
+  }
+
+  <section class="wc-card calc-card">
+    <div class="calc-pad">
+      <!-- Highlight layer behind a transparent textarea (headers / comments / errors coloured) -->
+      <div class="calc-backdrop" #backdrop aria-hidden="true">
+        @for (row of rows; track $index) {
+          <div [class]="'calc-line calc-' + row.line.kind">{{ row.code }}<span class="calc-comment">{{ row.comment }}</span>{{ row.code || row.comment ? '' : ' ' }}</div>
+        }
+      </div>
+      <textarea #editor class="calc-editor" spellcheck="false" autocomplete="off" wrap="off"
+        placeholder="พิมพ์ทีละบรรทัด เช่น 100 + 100 / 100" [value]="text" (input)="onInput($event)" (scroll)="onScroll()"></textarea>
+      <div class="calc-results" #results>
+        @for (row of rows; track $index) {
+          <div class="calc-line">
+            @if (row.display) {
+              <button type="button" class="calc-result" [title]="'คลิกเพื่อคัดลอก' + (row.line.variable ? ' (' + row.line.variable + ')' : '')"
+                (click)="copy(row.line.value!)">{{ row.display }}</button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="calc-footer">
+      <button type="button" class="btn btn-danger btn-sm" (click)="clear()">Clear</button>
+      <div class="calc-settings" [formGroup]="decimalsForm">
+        <label class="calc-setting" title="ปัดผลของแต่ละบรรทัดก่อนนำไปใช้ต่อ (ตัวแปร, prev, sum, Total) — เว้นว่าง = ไม่ปัด ใช้ค่าเต็ม">
+          ปัดเศษตอนคำนวณ
+          <input type="number" min="0" [max]="maxDecimals" placeholder="ไม่ปัด" formControlName="precision" aria-label="ปัดเศษตอนคำนวณ">
+          ตำแหน่ง
+        </label>
+        <label class="calc-setting" title="จำนวนทศนิยมที่แสดงและคัดลอก — เว้นว่าง = อัตโนมัติ (ตัดศูนย์ท้าย)">
+          ทศนิยมที่แสดง
+          <input type="number" min="0" [max]="maxDecimals" placeholder="อัตโนมัติ" formControlName="display" aria-label="ทศนิยมที่แสดง">
+          ตำแหน่ง
+        </label>
+      </div>
+      <span class="calc-total">Total: <button type="button" class="calc-result" title="คลิกเพื่อคัดลอก" (click)="copy(total)">{{ formatValue(total) }}</button></span>
+    </div>
+  </section>
+
+  <section class="wc-card calc-guide">
+    <button type="button" class="calc-guide-toggle" [attr.aria-expanded]="showGuide" (click)="toggleGuide()">
+      <i class="fa-solid fa-book-open"></i> ทำอะไรได้บ้าง
+      <i class="fa-solid calc-guide-chevron" [class.fa-chevron-up]="showGuide" [class.fa-chevron-down]="!showGuide"></i>
+    </button>
+
+    @if (showGuide) {
+      <p class="ec-hint mt-2">
+        <i class="fa-solid fa-circle-info"></i>
+        พิมพ์ทีละบรรทัด ผลขึ้นด้านขวา · คลิกผลลัพธ์เพื่อคัดลอก · Total = ผลรวมทุกบรรทัด ·
+        บรรทัดที่อ่านไม่ออกจะไม่แสดงผล · สมุดเก็บไว้ในเครื่องนี้ ·
+        แถบล่าง: <b>ปัดเศษตอนคำนวณ</b> = ปัดผลแต่ละบรรทัดก่อนนำไปใช้ต่อ (ตัวแปร, prev, sum, Total), <b>ทศนิยมที่แสดง</b> = จำนวนหลักที่เห็นและคัดลอก
+      </p>
+      <div class="calc-guide-groups">
+        @for (group of guide; track group.group) {
+          <div>
+            <h3>{{ group.group }}</h3>
+            <table class="ec-table">
+              <tbody>
+                @for (item of group.items; track item.syntax) {
+                  <tr>
+                    <th><code>{{ item.syntax }}</code></th>
+                    <td class="calc-guide-desc">
+                      {{ item.description }}
+                      @if (item.example) {
+                        <div class="calc-guide-example">
+                          <code>{{ item.example }}</code>
+                          @if (exampleResult(item.example); as result) {
+                            <span class="calc-guide-arrow">→</span> <b>{{ result }}</b>
+                          }
+                        </div>
+                      }
+                    </td>
+                    <td class="ec-copy">
+                      @if (item.example) {
+                        <button type="button" class="wc-chip" title="เพิ่มตัวอย่างนี้ลงสมุด" (click)="tryExample(item.example)">ลอง</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</div>

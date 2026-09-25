@@ -147,6 +147,30 @@
           <div class="tool-loading"><span class="spinner"></span>Loading…</div>
         }
       }
+
+      @case ('imageResizer') {
+        @defer (on immediate) {
+          <app-image-resizer />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('pdfConverter') {
+        @defer (on immediate) {
+          <app-pdf-converter />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('calculator') {
+        @defer (on immediate) {
+          <app-calc-toolkit />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
       
       @case ('jsonViewer') {
         @defer (on immediate) {

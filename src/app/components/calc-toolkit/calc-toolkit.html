@@ -1,0 +1,16 @@
+<div class="calc-toolkit">
+  <h1>Calculator</h1>
+
+  <nav class="tt-tabs" role="tablist" aria-label="Calculator sections">
+    @for (s of sections; track s.id) {
+      <button type="button" role="tab" [attr.aria-selected]="section === s.id" [class.active]="section === s.id"
+        (click)="setSection(s.id)">
+        <i [class]="'fa-solid ' + s.icon"></i> {{ s.label }}
+      </button>
+    }
+  </nav>
+
+  <!-- [hidden] instead of @switch keeps each pane's input when switching tabs -->
+  <div [hidden]="section !== 'calc'"><app-calculator [embedded]="true" /></div>
+  <div [hidden]="section !== 'vat'"><app-vat-calculator [embedded]="true" /></div>
+</div>

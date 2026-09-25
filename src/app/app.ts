@@ -18,6 +18,9 @@ import { EpochConverter } from './components/epoch-converter/epoch-converter';
 import { CronSchedule } from './components/cron-schedule/cron-schedule';
 import { ListTools } from './components/list-tools/list-tools';
 import { TextToolkit } from './components/text-toolkit/text-toolkit';
+import { ImageResizer } from './components/image-resizer/image-resizer';
+import { PdfConverter } from './components/pdf-converter/pdf-converter';
+import { CalcToolkit } from './components/calc-toolkit/calc-toolkit';
 import { AccessIdentity, AccessUtils } from './utils/access.utils';
 
 /** Fired on window when a link asks a toolkit to open one of its tabs; detail = { key, value } */
@@ -57,7 +60,10 @@ interface NavGroup {
     EpochConverter,
     CronSchedule,
     ListTools,
-    TextToolkit
+    TextToolkit,
+    ImageResizer,
+    PdfConverter,
+    CalcToolkit
 ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -76,6 +82,7 @@ export class App {
     textCompare: { tab: 'textToolkit', section: { key: 'textToolkit.section', value: 'compare' } },
     wordCounter: { tab: 'textToolkit', section: { key: 'textToolkit.section', value: 'count' } },
     unicodeConverter: { tab: 'textToolkit', section: { key: 'textToolkit.section', value: 'unicode' } },
+    vatCalculator: { tab: 'calculator', section: { key: 'calcToolkit.section', value: 'vat' } },
   };
   private static readonly STORAGE_KEYS = {
     activeTab: 'app.activeTab',
@@ -141,6 +148,10 @@ export class App {
         { id: 'timeConverter', label: 'Time Toolkit', icon: 'fa-clock' },
         // Moved into Time Toolkit as a tab (old links redirect via TAB_ALIASES):
         // { id: 'cronSchedule', label: 'Cron Schedule', icon: 'fa-calendar-check' },
+        { id: 'imageResizer', label: 'Image Resizer', icon: 'fa-image' },
+        { id: 'pdfConverter', label: 'PDF Converter', icon: 'fa-file-pdf' },
+        { id: 'calculator', label: 'Calculator', icon: 'fa-calculator' },
+        // { id: 'vatCalculator', label: 'VAT Calculator', icon: 'fa-percent' }, // tab in Calculator
         // { id: 'unicodeConverter', label: 'Unicode Converter', icon: 'fa-font' }, // tab in Text Toolkit
         // { id: 'removeDashesAndEmptyLines', label: 'Remove Dashes and Empty Lines', icon: 'fa-eraser' },
       ],

@@ -1,0 +1,160 @@
+<div class="image-resizer">
+  <h1>Image Resizer &amp; Converter</h1>
+
+  <div class="ir-layout">
+    <div class="ir-main">
+      <label class="ir-drop" [class.dragging]="dragging"
+        (dragover)="onDragOver($event)" (dragleave)="dragging = false" (drop)="onDrop($event)">
+        <input type="file" accept="image/*" multiple hidden (change)="onFileInput($event)">
+        <i class="fa-solid fa-images"></i>
+        <span><b>เลือกรูป</b> หรือลากมาวาง / Ctrl+V วางจาก clipboard</span>
+        <small>JPG, PNG, GIF, SVG, WEBP, BMP (อ่านได้ตามที่ browser รองรับ, บันทึกเป็น JPG / PNG / GIF / SVG) — ประมวลผลในเครื่อง ไม่อัปโหลด</small>
+      </label>
+
+      @if (items.length) {
+        <div class="ir-grid">
+          @for (item of items; track item.id) {
+            <div class="ir-item">
+              <button type="button" class="ir-remove" title="Remove" (click)="remove(item)"><i class="fa-solid fa-xmark"></i></button>
+              <div class="ir-thumb"><img [src]="item.result?.url ?? item.url" [alt]="item.file.name"></div>
+              <div class="ir-name" [title]="item.file.name">{{ item.file.name }}</div>
+              <div class="ir-size">
+                {{ formatLabel(item.file.type) }} {{ item.size.width }}×{{ item.size.height }}
+                <i class="fa-solid fa-arrow-right"></i>
+                @let target = targetSize(item);
+                <b>{{ formatLabel(outputType(item)) }} {{ target.width }}×{{ target.height }}</b>
+              </div>
+              <ng-container *ngTemplateOutlet="sizeControls; context: { $implicit: item }" />
+              <div class="ir-bytes">
+                {{ formatBytes(item.file.size) }}
+                @if (item.result) {
+                  <i class="fa-solid fa-arrow-right"></i> {{ formatBytes(item.result.blob.size) }}
+                }
+              </div>
+              @if (item.error) {
+                <div class="ir-error">{{ item.error }}</div>
+              }
+              <div class="pc-order">
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="openPreview(item)" [disabled]="busy">
+                  <i class="fa-solid fa-eye"></i> Preview
+                </button>
+                @if (item.result) {
+                  <button type="button" class="btn btn-outline-primary btn-sm" (click)="download(item)">
+                    <i class="fa-solid fa-download"></i> Download
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <aside class="ir-side" [formGroup]="form">
+      <h3>Resize by pixels <small class="ir-scope">All images</small></h3>
+      <div class="ir-fields">
+        <label>Width (px)
+          <input type="number" min="1" formControlName="width" placeholder="auto">
+        </label>
+        <label>Height (px)
+          <input type="number" min="1" formControlName="height" placeholder="auto">
+        </label>
+      </div>
+      @if (customCount) {
+        <p class="ir-hint mt-0">{{ customCount }} รูปใช้ขนาดของตัวเอง (แก้ที่การ์ด) — ค่านี้ใช้กับรูปที่เหลือ</p>
+      } @else if (items.length > 1) {
+        <p class="ir-hint mt-0">ใช้กับทุกรูป — อยากให้รูปไหนต่างออกไป แก้ W × H ที่การ์ดรูปนั้น</p>
+      }
+            <label class="ir-check"><input type="checkbox" formControlName="keepAspectRatio"> Maintain aspect ratio</label>
+      <label class="ir-check"><input type="checkbox" formControlName="noEnlarge"> Do not enlarge if smaller</label>
+      <p class="ir-hint">
+        @if (form.value.keepAspectRatio) {
+          ย่อ/ขยายให้พอดีกรอบ Width × Height โดยไม่บิดสัดส่วน (เว้นช่องไหนว่าง = คำนวณให้, ว่างทั้งคู่ = ขนาดเดิม)
+        } @else {
+          ออกขนาด Width × Height ตรงตามที่กรอก (รูปอาจยืด)
+        }
+      </p>
+
+      <h3>Convert to</h3>
+      <div class="ir-formats">
+        @for (format of formats; track format.value) {
+          <button type="button" class="wc-chip" [class.active]="form.value.format === format.value" (click)="setFormat(format.value)">{{ format.label }}</button>
+        }
+      </div>
+      @if (usesQuality) {
+        <label class="ir-quality">Quality (JPG) <b>{{ form.value.quality }}%</b>
+          <input type="range" min="10" max="100" step="1" formControlName="quality">
+        </label>
+      }
+      <p class="ir-hint">PNG / GIF / SVG เก็บพื้นใสได้ — JPG ไม่มีพื้นใส จะเติมพื้นขาวให้ · GIF สูงสุด 256 สี (GIF เคลื่อนไหวได้แค่เฟรมแรก) · รูปเป็น SVG = ฝังภาพไว้ใน SVG ไม่ใช่ vector, SVG เป็น SVG ยังเป็น vector</p>
+
+      <button type="button" class="btn btn-primary w-100" (click)="resizeAll()" [disabled]="busy" data-primary-action>
+        {{ busy ? 'Converting…' : 'Resize / Convert' + (items.length > 1 ? ' ' + items.length + ' images' : '') }}
+      </button>
+      @if (hasResults && items.length > 1) {
+        <button type="button" class="btn btn-outline-primary w-100 mt-2" (click)="downloadAll()">
+          <i class="fa-solid fa-download"></i> Download All ({{ resultCount }})
+        </button>
+      }
+      @if (items.length) {
+        <button type="button" class="btn btn-danger w-100 mt-2" (click)="clear()">Clear</button>
+      }
+    </aside>
+  </div>
+
+  @if (preview?.result; as result) {
+    <div class="ir-preview-backdrop" (click)="closePreview()">
+      <div class="ir-preview" role="dialog" aria-modal="true" aria-label="Preview" (click)="$event.stopPropagation()">
+        <div class="ir-preview-head">
+          <h3 [title]="preview!.file.name">{{ preview!.file.name }}</h3>
+          <label class="ir-check mb-0"><input type="checkbox" [checked]="actualPixels" (change)="actualPixels = !actualPixels"> Actual pixels</label>
+          <span class="wc-spacer"></span>
+          <button type="button" class="btn btn-outline-primary btn-sm" (click)="download(preview!)"><i class="fa-solid fa-download"></i> Download</button>
+          <button type="button" class="ir-remove ir-preview-close" title="Close (Esc)" (click)="closePreview()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="ir-preview-size">
+          <span>ขนาดของรูปนี้</span>
+          <ng-container *ngTemplateOutlet="sizeControls; context: { $implicit: preview! }" />
+        </div>
+
+        <div class="ir-preview-stats">
+          <b>{{ formatLabel(result.blob.type) }} {{ result.size.width }}×{{ result.size.height }}</b> · {{ formatBytes(result.blob.size) }}
+        </div>
+
+        <div class="ir-preview-view" [class.actual]="actualPixels">
+          <img [src]="result.url" [alt]="result.name"
+            [style.width.px]="actualPixels ? result.size.width : null"
+            [style.aspect-ratio]="result.size.width + ' / ' + result.size.height">
+        </div>
+        @if (actualPixels) {
+          <p class="ir-hint mb-0">แสดงขนาดจริง 1:1 (เลื่อนดูได้)</p>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Own W × H + 🔗 of one image (card and preview popup) -->
+  <ng-template #sizeControls let-item>
+    @let entered = enteredSize(item);
+    @let locked = keepsRatio(item);
+    <div class="ir-own-size" [class.custom]="isCustom(item)">
+      <input type="number" min="1" aria-label="Width" title="Width (px) ของรูปนี้" placeholder="auto"
+        [value]="entered.width ?? ''" (input)="setCustomSize(item, 'width', $any($event.target).value)">
+      <button type="button" class="ir-lock" [class.locked]="locked" (click)="toggleKeepRatio(item)"
+        [title]="locked ? 'ล็อกสัดส่วนอยู่ — กดเพื่อกำหนด W × H อิสระ (รูปอาจยืด)' : 'ไม่ล็อกสัดส่วน — กดเพื่อล็อก'">
+        <i class="fa-solid" [class.fa-link]="locked" [class.fa-link-slash]="!locked"></i>
+      </button>
+      <input type="number" min="1" aria-label="Height" title="Height (px) ของรูปนี้" placeholder="auto"
+        [value]="entered.height ?? ''" (input)="setCustomSize(item, 'height', $any($event.target).value)">
+      @if (isCustom(item)) {
+        <button type="button" class="ir-own-reset" title="กลับไปใช้ค่าของ All images" (click)="resetCustomSize(item)">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+      }
+    </div>
+    @if (sizeNote(item); as note) {
+      <div class="ir-size-note">ได้ {{ targetSize(item).width }}×{{ targetSize(item).height }} — {{ note }}</div>
+    }
+  </ng-template>
+</div>

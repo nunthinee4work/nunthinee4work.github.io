@@ -1,0 +1,50 @@
+<div class="vat-calculator" [formGroup]="form">
+  @if (!embedded) {
+    <h1>VAT Calculator</h1>
+  }
+
+  <div class="ec-grid vc-grid">
+    <section class="wc-card">
+      <h3>ราคา</h3>
+
+      <div class="ec-row vc-modes">
+        <span class="vc-label">ราคาที่มี</span>
+        @for (m of modes; track m.id) {
+          <button type="button" class="wc-chip" [class.active]="mode === m.id" (click)="setMode(m.id)">
+            {{ m.label }} <span class="vc-key">{{ m.key }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="ec-row">
+        <input type="text" class="ec-input-lg vc-amount" inputmode="decimal" autocomplete="off" spellcheck="false" formControlName="amount"
+          [placeholder]="(mode === 'inc' ? 'ราคารวม VAT' : 'ราคาก่อน VAT') + ' เช่น 1,070'">
+        <span class="vc-label">VAT</span>
+        <input type="text" class="vc-rate" inputmode="decimal" autocomplete="off" spellcheck="false" formControlName="rate"
+          [class.is-invalid]="rateInvalid" aria-label="VAT rate (%)">
+        <span class="vc-label">%</span>
+      </div>
+
+      @if (rateInvalid) {
+        <p class="ec-error"><i class="fa-solid fa-circle-exclamation"></i> ใส่อัตรา VAT เป็นตัวเลขไม่ติดลบ เช่น 7</p>
+      } @else {
+        <p class="ec-hint mb-0"><i class="fa-solid fa-circle-info"></i> สูตร: {{ formulas[mode] }} · ทศนิยม 6 ตำแหน่ง</p>
+      }
+    </section>
+
+    <section class="wc-card">
+      <h3>ผลลัพธ์</h3>
+      <table class="ec-table vc-table">
+        <tbody>
+          @for (row of rows; track row.key) {
+            <tr [class.vc-highlight]="(mode === 'inc' && row.key === 'priceExcVat') || (mode === 'exc' && row.key === 'priceIncVat')">
+              <th>{{ row.label }} <span class="vc-key">{{ row.key }}</span></th>
+              <td [title]="row.value">{{ row.display }} <span class="vc-cur">บาท</span></td>
+              <td class="ec-copy"><app-copy-button [textToCopy]="row.value" [showIconOnly]="true" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  </div>
+</div>
