@@ -1,0 +1,18 @@
+<div class="text-toolkit">
+  <h1>Text Toolkit</h1>
+
+  <nav class="tt-tabs" role="tablist" aria-label="Text Toolkit sections">
+    @for (s of sections; track s.id) {
+      <button type="button" role="tab" [attr.aria-selected]="section === s.id" [class.active]="section === s.id"
+        (click)="setSection(s.id)">
+        <i [class]="'fa-solid ' + s.icon"></i> {{ s.label }}
+      </button>
+    }
+  </nav>
+
+  <!-- [hidden] instead of @switch keeps each pane's input when switching tabs -->
+  <div [hidden]="section !== 'json'"><app-json-viewer [embedded]="true" /></div>
+  <div [hidden]="section !== 'compare'"><app-text-compare [embedded]="true" /></div>
+  <div [hidden]="section !== 'count'"><app-word-counter [embedded]="true" /></div>
+  <div [hidden]="section !== 'unicode'"><app-unicode-converter [embedded]="true" /></div>
+</div>

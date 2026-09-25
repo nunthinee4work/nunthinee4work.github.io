@@ -1,0 +1,88 @@
+@switch (kind) {
+  @case ('primitive') {
+    <span [class]="'jg-value jg-' + primitiveType" [class.jg-match]="ctx.matches(value)"
+      [class.jg-selected]="ctx.isSelected(path)" (click)="select(path, $event)">{{ display }}</span>
+  }
+
+  @case ('object') {
+    <div class="jg-block">
+      <button type="button" class="jg-toggle" (click)="toggle($event)" [class.jg-selected]="ctx.isSelected(path)">
+        <i class="fa-solid" [class.fa-caret-down]="expanded" [class.fa-caret-right]="!expanded"></i>
+        <span class="jg-summary">{{ summary }}</span>
+      </button>
+      @if (expanded) {
+        <table class="jg-table">
+          <tbody>
+            @for (entry of entries; track entry.key) {
+              <tr>
+                <th class="jg-key" [class.jg-match]="ctx.matches(entry.key)" [class.jg-selected]="ctx.isSelected(entry.path)"
+                  (click)="select(entry.path, $event)">{{ entry.key }}</th>
+                <td><app-json-grid-node [value]="entry.value" [path]="entry.path" [depth]="depth + 1" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  @case ('array') {
+    <div class="jg-block">
+      <div class="jg-block-header">
+        <button type="button" class="jg-toggle" (click)="toggle($event)" [class.jg-selected]="ctx.isSelected(path)">
+          <i class="fa-solid" [class.fa-caret-down]="expanded" [class.fa-caret-right]="!expanded"></i>
+          <span class="jg-summary">{{ summary }}</span>
+        </button>
+        @if (columns && expanded) {
+          <button type="button" class="jg-action" (click)="exportCsv($event)" title="Export this table to CSV">
+            <i class="fa-solid fa-file-csv"></i> CSV
+          </button>
+        }
+      </div>
+
+      @if (expanded) {
+        @if (columns) {
+          <table class="jg-table jg-grid">
+            <thead>
+              <tr>
+                <th class="jg-index">#</th>
+                @for (column of columns; track column) {
+                  <th [class.jg-match]="ctx.matches(column)">{{ column }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows; track row.index) {
+                <tr>
+                  <th class="jg-index" [class.jg-selected]="ctx.isSelected(row.path)" (click)="select(row.path, $event)">{{ row.index }}</th>
+                  @for (cell of row.cells; track $index) {
+                    <td>
+                      @if (cell.has) {
+                        <app-json-grid-node [value]="cell.value" [path]="cell.path" [depth]="depth + 1" />
+                      } @else {
+                        <span class="jg-missing">—</span>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else if (entries.length) {
+          <table class="jg-table">
+            <tbody>
+              @for (entry of entries; track entry.key) {
+                <tr>
+                  <th class="jg-index" [class.jg-selected]="ctx.isSelected(entry.path)" (click)="select(entry.path, $event)">{{ entry.key }}</th>
+                  <td><app-json-grid-node [value]="entry.value" [path]="entry.path" [depth]="depth + 1" /></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <span class="jg-missing">empty</span>
+        }
+      }
+    </div>
+  }
+}

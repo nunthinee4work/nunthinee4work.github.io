@@ -1,0 +1,78 @@
+<form [formGroup]="form" class="cron-schedule">
+  @if (!embedded) {
+    <h1>Cron Schedule</h1>
+  }
+
+  <div class="cr-description" [class.cr-invalid]="error">
+    @if (schedule) {
+      “{{ schedule.description }}”
+    } @else if (error) {
+      <i class="fa-solid fa-circle-exclamation"></i> {{ error.message }}
+    }
+  </div>
+
+  <div class="cr-input-wrap">
+    <input #expr type="text" formControlName="expression" class="cr-input" spellcheck="false" autocomplete="off"
+      [class.is-invalid]="error" (keyup)="onCursor(expr)" (click)="onCursor(expr)" (focus)="onCursor(expr)"
+      (blur)="activeField = null" placeholder="* * * * *">
+    <app-copy-button [textToCopy]="form.getRawValue().expression"></app-copy-button>
+  </div>
+
+  <div class="cr-legend">
+    @for (field of legend; track field.name) {
+      <div class="cr-legend-item" [class.active]="activeField === field.name"
+        [class.cr-invalid]="error?.field === field.name">
+        <code>{{ fieldRaw(field.name) || '·' }}</code>
+        <span class="cr-legend-label">{{ field.label }}</span>
+        <span class="cr-legend-allowed">{{ field.allowed }}</span>
+      </div>
+    }
+  </div>
+
+  <div class="ec-grid">
+    <section class="wc-card">
+      <div class="wc-card-head">
+        <h3>Next runs</h3>
+        <select formControlName="zone" class="ec-select">
+          @for (zone of zones; track zone.id) {
+            <option [value]="zone.id">{{ zone.label }}</option>
+          }
+        </select>
+      </div>
+      @if (nextRuns.length) {
+        <ol class="cr-runs">
+          @for (run of nextRuns; track run.getTime()) {
+            <li><span>{{ formatRun(run) }}</span><span class="cr-rel">{{ relative(run) }}</span></li>
+          }
+        </ol>
+      } @else if (schedule) {
+        <p class="wc-empty">ไม่พบเวลาที่จะรันใน 5 ปีข้างหน้า (เช่น 31 กุมภาพันธ์)</p>
+      } @else {
+        <p class="wc-empty">แก้ expression ให้ถูกก่อน</p>
+      }
+      @if (schedule?.withSeconds) {
+        <p class="ec-hint mt-2 mb-0"><i class="fa-solid fa-leaf"></i> 6 fields: รูปแบบ Spring <code>&#64;Scheduled(cron = …)</code> ที่มีวินาทีเป็น field แรก</p>
+      }
+    </section>
+
+    <section class="wc-card">
+      <h3>Examples</h3>
+      <div class="cr-examples">
+        @for (example of examples; track example.expression) {
+          <button type="button" class="cr-example" (click)="use(example.expression)"
+            [class.active]="form.getRawValue().expression.trim() === example.expression">
+            <code>{{ example.expression }}</code>
+            <span>{{ example.label }}</span>
+          </button>
+        }
+      </div>
+      <table class="ec-table mt-3">
+        <tbody>
+          @for (s of symbols; track s.symbol) {
+            <tr><th><code>{{ s.symbol }}</code></th><td class="cr-symbol-meaning">{{ s.meaning }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  </div>
+</form>

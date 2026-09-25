@@ -1,0 +1,74 @@
+<div class="json-viewer" [class.view-tab]="view === 'tab'">
+  <div class="jv-header">
+    @if (!embedded) {
+      <h1 class="mb-0">JSON Viewer</h1>
+    }
+
+    <div class="jv-view-switch" role="group" aria-label="Layout">
+      <button type="button" [class.active]="view === 'split'" (click)="setView('split')" title="Side by side">
+        <i class="fa-solid fa-table-columns"></i> Split
+      </button>
+      <button type="button" [class.active]="view === 'tab'" (click)="setView('tab')" title="One panel at a time">
+        <i class="fa-regular fa-window-maximize"></i> Tab
+      </button>
+    </div>
+  </div>
+
+  <div class="jv-toolbar">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="loadSample()"><i class="fa-regular fa-file-lines me-1"></i>Sample</button>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="format()"><i class="fa-solid fa-align-left me-1"></i>Format</button>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="minify()"><i class="fa-solid fa-compress me-1"></i>Minify</button>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="validate()"><i class="fa-regular fa-circle-check me-1"></i>Validate</button>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="expandAll(true)" [disabled]="!hasData"><i class="fa-solid fa-up-right-and-down-left-from-center me-1"></i>Expand all</button>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="expandAll(false)" [disabled]="!hasData"><i class="fa-solid fa-down-left-and-up-right-to-center me-1"></i>Collapse all</button>
+    <button type="button" class="btn btn-danger btn-sm" (click)="clear()"><i class="fa-regular fa-trash-can me-1"></i>Clear</button>
+
+    <div class="jv-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input #search type="text" placeholder="Search keys & values" (input)="onSearch(search.value)"
+        (keydown.enter)="$event.preventDefault(); nextMatch($any($event).shiftKey ? -1 : 1)">
+      @if (search.value) {
+        <span class="jv-search-count">{{ matchPosition }}</span>
+      }
+    </div>
+  </div>
+
+  @if (view === 'tab') {
+    <div class="jv-tabs">
+      <button type="button" [class.active]="activePane === 'json'" (click)="activePane = 'json'">JSON</button>
+      <button type="button" [class.active]="activePane === 'grid'" (click)="activePane = 'grid'">GRID</button>
+    </div>
+  }
+
+  <div class="jv-panes">
+    <section class="jv-pane jv-pane-json" [hidden]="view === 'tab' && activePane !== 'json'">
+      <app-json-editor [formControl]="control" height="calc(100vh - 290px)" placeholder="Paste or type JSON here"
+        (valueChange)="onTextChange($event)"></app-json-editor>
+    </section>
+
+    <section class="jv-pane jv-pane-grid" [hidden]="view === 'tab' && activePane !== 'grid'">
+      <div class="jv-grid-bar">
+        @if (selectedPath) {
+          <code class="jv-path" [title]="selectedLabel">{{ selectedLabel }}</code>
+          <app-copy-button [textToCopy]="selectedLabel" [showIconOnly]="true"></app-copy-button>
+        } @else {
+          <span class="jv-hint">คลิกที่ช่องในตารางเพื่อดูตำแหน่งใน JSON</span>
+        }
+        @if (stale) {
+          <span class="jv-stale"><i class="fa-solid fa-triangle-exclamation"></i> JSON ยังไม่ถูกต้อง — แสดงข้อมูลล่าสุดที่ถูกต้อง</span>
+        }
+      </div>
+
+      <div class="jv-grid" [class.is-stale]="stale">
+        @if (hasData) {
+          <app-json-grid-node [value]="parsed" [path]="[]" />
+        } @else {
+          <div class="jv-empty">
+            <i class="fa-solid fa-table-cells"></i>
+            <p>วาง JSON ทางซ้าย หรือกด <b>Sample</b> เพื่อดูตัวอย่าง</p>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+</div>

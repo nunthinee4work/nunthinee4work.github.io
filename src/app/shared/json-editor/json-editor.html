@@ -1,0 +1,50 @@
+<div class="json-editor" [class.has-error]="result && !result.valid" [class.is-disabled]="disabled">
+  <div class="json-editor-body">
+    <div class="json-editor-gutter" #gutter aria-hidden="true">
+      @for (n of lineNumbers; track n) {
+        <div [class.current]="n === cursor.line" [class.error]="result && !result.valid && n === result.line">{{ n }}</div>
+      }
+    </div>
+
+    <div class="json-editor-code">
+      <div class="json-editor-highlight" #highlight aria-hidden="true">
+        @if (result && !result.valid && result.line) {
+          <div class="json-editor-error-row" [style.top.px]="errorTop"></div>
+          <div class="json-editor-error-marker" [style.top.px]="errorTop + lineHeight - 3"
+            [style.left.px]="errorMarkerLeft" [style.width.px]="markerWidth"></div>
+        }
+      </div>
+      <textarea #textarea spellcheck="false" autocomplete="off" [placeholder]="placeholder" [disabled]="disabled"
+        [style.height]="height"
+        (input)="onInput()" (blur)="onBlur()" (scroll)="syncScroll()"
+        (click)="updateCursor()" (keyup)="updateCursor()" (select)="updateCursor()"></textarea>
+    </div>
+  </div>
+
+  <div class="json-editor-status">
+    @if (!result) {
+      <span class="json-editor-muted">{{ placeholder }}</span>
+    } @else if (result.valid) {
+      <span class="json-editor-ok">
+        <i class="fa-solid fa-circle-check"></i>
+        Valid JSON
+        @if (result.count !== undefined) {
+          · {{ result.count }} {{ itemLabel }}{{ result.count === 1 ? '' : 's' }}
+        }
+      </span>
+    } @else {
+      <span class="json-editor-error">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span><b>Line {{ result.line }}, Col {{ result.column }}</b>@if (statusMessage) {: {{ statusMessage }}}</span>
+      </span>
+      <button type="button" class="json-editor-goto" (click)="gotoError()">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i> Go to line {{ result.line }}
+      </button>
+    }
+
+    <button type="button" class="json-editor-tool" (click)="format()" [disabled]="!result?.valid" title="Pretty-print JSON">
+      <i class="fa-solid fa-align-left"></i> Format
+    </button>
+    <span class="json-editor-pos">Ln {{ cursor.line }}, Col {{ cursor.column }}</span>
+  </div>
+</div>

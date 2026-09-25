@@ -1,0 +1,24 @@
+<div [formGroup]="form">
+  @if (!embedded) {
+    <h1>Unicode Converter</h1>
+  }
+
+  <div class="textarea-content">
+    <textarea formControlName="inputUnicode" placeholder="Paste text with Unicode escapes, e.g. \u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35" rows="10" class="input-area"></textarea>
+  </div>
+
+  <div class="mt-3">
+    <button class="btn btn-primary me-2" (click)="processUnicodeConverter()" data-primary-action>Decode</button>
+    <button class="btn btn-danger" (click)="clearDataUnicode()">Clear</button>
+  </div>
+
+  <hr style="margin-top: 30px;" />
+
+  <h2>
+    Result will show here:
+    <app-copy-button [textToCopy]="unicodeOutput"></app-copy-button>
+    <app-download-button [content]="unicodeOutput" fileName="unicode-decoded" extension="txt" mimeType="text/plain"></app-download-button>
+  </h2>
+
+  <pre class="payload-content">{{ unicodeOutput }}</pre>
+</div>

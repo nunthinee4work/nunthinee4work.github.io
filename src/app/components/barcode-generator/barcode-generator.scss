@@ -1,0 +1,40 @@
+.barcode-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.barcode-item {
+  display: flex;
+  justify-content: center;
+}
+
+.barcode-card {
+  width: 100%;
+  min-height: 220px;
+
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  box-shadow: var(--shadow);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+
+  padding: 16px;
+
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+.detail {
+  margin-top: 4px;
+  text-align: center;
+  font-weight: 500;
+  color: var(--c-text-soft);
+}

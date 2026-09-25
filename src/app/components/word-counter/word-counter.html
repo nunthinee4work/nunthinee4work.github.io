@@ -1,0 +1,91 @@
+<form [formGroup]="form" class="word-counter">
+  @if (!embedded) {
+    <h1>Word Counter</h1>
+  }
+
+  <div class="wc-headline">
+    <div><b>{{ stats.words.toLocaleString() }}</b> words</div>
+    <div><b>{{ stats.characters.toLocaleString() }}</b> characters</div>
+  </div>
+
+  <div class="wc-layout">
+    <div class="wc-editor">
+      <textarea formControlName="text" placeholder="พิมพ์หรือวางข้อความที่นี่ — นับให้ทันที รองรับภาษาไทย"
+        [class.is-invalid]="limit && remaining < 0"></textarea>
+
+      <div class="wc-limit">
+        <span class="wc-limit-label">Character limit</span>
+        @for (preset of limitPresets; track preset) {
+          <button type="button" class="wc-chip" [class.active]="limit === preset" (click)="setLimit(preset)">{{ preset }}</button>
+        }
+        <input type="number" min="1" formControlName="limit" placeholder="Custom" class="wc-limit-input">
+        @if (limit) {
+          <button type="button" class="wc-chip" (click)="setLimit(null)" title="Remove limit"><i class="fa-solid fa-xmark"></i></button>
+        }
+        <span class="wc-spacer"></span>
+        <app-copy-button [textToCopy]="form.getRawValue().text"></app-copy-button>
+        <button type="button" class="btn btn-danger btn-sm" (click)="clear()">Clear</button>
+      </div>
+
+      @if (limit) {
+        <div class="wc-progress" [class.over]="remaining < 0" [class.near]="remaining >= 0 && remaining <= limit * 0.1">
+          <div class="wc-progress-bar" [style.width.%]="limitPercent"></div>
+        </div>
+        <div class="wc-progress-text" [class.over]="remaining < 0">
+          @if (remaining >= 0) {
+            เหลืออีก <b>{{ remaining }}</b> ตัวอักษร จาก {{ limit }}
+          } @else {
+            เกินมา <b>{{ -remaining }}</b> ตัวอักษร (limit {{ limit }})
+          }
+        </div>
+      }
+    </div>
+
+    <aside class="wc-side">
+      <div class="wc-card">
+        <h3>Details</h3>
+        <dl class="wc-stats">
+          <dt>Words</dt><dd>{{ stats.words.toLocaleString() }}</dd>
+          <dt>Unique words</dt><dd>{{ stats.uniqueWords.toLocaleString() }}</dd>
+          <dt>Characters</dt><dd>{{ stats.characters.toLocaleString() }}</dd>
+          <dt>Characters (no spaces)</dt><dd>{{ stats.charactersNoSpaces.toLocaleString() }}</dd>
+          <dt>Sentences</dt><dd>{{ stats.sentences.toLocaleString() }}</dd>
+          <dt>Paragraphs</dt><dd>{{ stats.paragraphs.toLocaleString() }}</dd>
+          <dt>Lines</dt><dd>{{ stats.lines.toLocaleString() }}</dd>
+          <dt title="UTF-8 — Thai characters take 3 bytes each">Size (UTF-8)</dt><dd>{{ stats.bytes.toLocaleString() }} bytes</dd>
+          <dt>Avg. word length</dt><dd>{{ stats.averageWordLength.toFixed(1) }}</dd>
+          <dt>Longest word</dt><dd class="wc-longest" [title]="stats.longestWord">{{ stats.longestWord || '—' }}</dd>
+          <dt>Reading time</dt><dd>{{ formatDuration(stats.readingMinutes) }}</dd>
+          <dt>Speaking time</dt><dd>{{ formatDuration(stats.speakingMinutes) }}</dd>
+        </dl>
+      </div>
+
+      <div class="wc-card">
+        <div class="wc-card-head">
+          <h3>Keyword density</h3>
+          <div class="jv-view-switch" role="group" aria-label="Phrase length">
+            @for (n of [1, 2, 3]; track n) {
+              <button type="button" [class.active]="form.getRawValue().phraseLength === n"
+                (click)="form.patchValue({ phraseLength: n })">{{ n }}</button>
+            }
+          </div>
+        </div>
+        <label class="wc-check"><input type="checkbox" formControlName="excludeStopWords"> ไม่นับคำทั่วไป (the, and, ที่, และ …)</label>
+
+        @if (keywords.length) {
+          <ul class="wc-keywords">
+            @for (keyword of keywords; track keyword.phrase) {
+              <li>
+                <span class="wc-keyword" [title]="keyword.phrase">{{ keyword.phrase }}</span>
+                <span class="wc-keyword-count">{{ keyword.count }} ({{ keyword.percent.toFixed(1) }}%)</span>
+                <span class="wc-keyword-bar" [style.width.%]="(keyword.count / keywords[0].count) * 100"></span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="wc-empty">ยังไม่มีคำที่ซ้ำให้แสดง</p>
+        }
+      </div>
+    </aside>
+  </div>
+</form>

@@ -1,0 +1,175 @@
+<form [formGroup]="form" class="list-tools">
+  <h1>List Formatter</h1>
+
+  <nav class="tt-tabs" role="tablist" aria-label="List Formatter sections">
+    @for (s of sections; track s.id) {
+      <button type="button" role="tab" [attr.aria-selected]="section === s.id" [class.active]="section === s.id"
+        (click)="setSection(s.id)">
+        <i [class]="'fa-solid ' + s.icon"></i> {{ s.label }}
+      </button>
+    }
+  </nav>
+
+  @if (section === 'format') {
+  <p class="text-muted">จัดการรายการ: ตัดช่องว่าง ลบตัวซ้ำ เรียงภาษาไทย (ก–ฮ) / อังกฤษ (A–Z) ใส่ quote และเปลี่ยนตัวคั่น — ผลลัพธ์อัปเดตทันที</p>
+
+  <div class="lt-options">
+    <div class="radio-group">
+      <label>Input split by:</label>
+      <label><input type="radio" formControlName="inputSeparator" value="AUTO" />New line &amp; comma</label>
+      <label><input type="radio" formControlName="inputSeparator" value="NEW_LINE" />New line</label>
+      <label><input type="radio" formControlName="inputSeparator" value="COMMA" />Comma</label>
+    </div>
+
+    <div class="radio-group">
+      <label>Output separator:</label>
+      <label><input type="radio" formControlName="outputSeparator" value="NEW_LINE" />New line</label>
+      <label><input type="radio" formControlName="outputSeparator" value="COMMA" />Comma</label>
+      <label><input type="radio" formControlName="outputSeparator" value="COMMA_SPACE" />Comma + space</label>
+      <label><input type="radio" formControlName="outputSeparator" value="COMMA_NEWLINE" />Comma + new line</label>
+      <label><input type="radio" formControlName="outputSeparator" value="TAB" />Tab</label>
+    </div>
+
+    <div class="radio-group">
+      <label>Output quote:</label>
+      <label><input type="radio" formControlName="quote" value="NO_QUOTE" />No quote</label>
+      <label><input type="radio" formControlName="quote" value="SINGLE_QUOTE" />'Single'</label>
+      <label><input type="radio" formControlName="quote" value="DOUBLE_QUOTE" />"Double"</label>
+    </div>
+
+    <div class="radio-group">
+      <label>Options:</label>
+      <label><input type="checkbox" formControlName="trim" />Trim spaces</label>
+      <label><input type="checkbox" formControlName="removeDuplicates" />Remove duplicates</label>
+      <label><input type="checkbox" formControlName="stripQuotes" />Strip existing quotes</label>
+    </div>
+  </div>
+
+  <div class="lt-sort">
+    <span class="lt-sort-label">Sort</span>
+    <div class="jv-view-switch" role="radiogroup" aria-label="Sort order">
+      @for (option of sortOptions; track option.value) {
+        <button type="button" role="radio" [attr.aria-checked]="form.getRawValue()['sort'] === option.value"
+          [class.active]="form.getRawValue()['sort'] === option.value" (click)="form.patchValue({ sort: option.value })"
+          [title]="option.title">
+          <i [class]="'fa-solid ' + option.icon"></i> {{ option.label }}
+        </button>
+      }
+    </div>
+    @if (form.getRawValue()['sort'] !== 'NONE') {
+      <label class="wc-check mb-0"><input type="checkbox" formControlName="numericSort"> เรียงตัวเลขแบบค่า (2 ก่อน 10)</label>
+    }
+  </div>
+  } @else {
+  <p class="text-muted">นับว่าแต่ละบรรทัดซ้ำกี่ครั้ง — หาค่าที่ซ้ำ ดูค่าไม่ซ้ำ หรือ copy ไปวางใน Excel (TAB)</p>
+
+  <div class="lt-options">
+    <div class="radio-group">
+      <label>Sort by:</label>
+      <label><input type="radio" formControlName="countSort" value="COUNT" />Count (most first)</label>
+      <label><input type="radio" formControlName="countSort" value="VALUE" />Value (A–Z · ก–ฮ)</label>
+      <label><input type="radio" formControlName="countSort" value="ORIGINAL" />First seen</label>
+    </div>
+
+    <div class="radio-group">
+      <label>Values:</label>
+      <label><input type="radio" formControlName="duplicatesOnly" [value]="false" />All</label>
+      <label><input type="radio" formControlName="duplicatesOnly" [value]="true" />Duplicates only</label>
+    </div>
+
+    <div class="radio-group">
+      <label>Line format:</label>
+      <label><input type="radio" formControlName="countFormat" value="TEXT" />Text</label>
+      <label><input type="radio" formControlName="countFormat" value="CSV" />CSV</label>
+      <label><input type="radio" formControlName="countFormat" value="TAB" />TAB (Excel)</label>
+    </div>
+
+    <div class="radio-group">
+      <label>Options:</label>
+      <label><input type="checkbox" formControlName="includeCounts" />Include ‘Counts’ column</label>
+      <label><input type="checkbox" formControlName="trim" />Trim spaces</label>
+      <label><input type="checkbox" formControlName="countIgnoreCase" />Ignore case</label>
+    </div>
+  </div>
+  }
+
+  <div class="lt-panes">
+    <div class="lt-pane">
+      <div class="tc-input-head">
+        <label for="lt-input">Input
+          <span class="tc-lines">{{ section === 'format' ? result.inputCount + ' items' : counts.totalLines + ' lines' }}</span></label>
+        <div class="lt-output-actions">
+          @if (lastCleared && !form.getRawValue()['text']) {
+            <button type="button" class="json-editor-tool" (click)="restore()" title="Bring back the text you just cleared">
+              <i class="fa-solid fa-rotate-left"></i> Restore input
+            </button>
+          }
+          <button type="button" class="json-editor-tool" (click)="clear()">Clear</button>
+        </div>
+      </div>
+      <textarea id="lt-input" formControlName="text" spellcheck="false"
+        [placeholder]="section === 'format' ? 'วางรายการที่นี่ ทีละบรรทัด หรือคั่นด้วย comma' : 'วางรายการที่นี่ ทีละบรรทัด (เช่น copy คอลัมน์จาก Excel)'"></textarea>
+    </div>
+
+    @if (section === 'format') {
+    <div class="lt-pane">
+      <div class="tc-input-head">
+        <label>Output <span class="tc-lines">{{ result.items.length }} items</span></label>
+        <div class="lt-output-actions">
+          <button type="button" class="json-editor-tool" (click)="useOutput()" [disabled]="!result.output" title="Use the output as the new input">
+            <i class="fa-solid fa-arrow-left"></i> Use as input
+          </button>
+          <app-download-button [content]="result.output" fileName="list" extension="txt"></app-download-button>
+          <app-copy-button [textToCopy]="result.output"></app-copy-button>
+        </div>
+      </div>
+      <textarea class="lt-output" readonly [value]="result.output" placeholder="ผลลัพธ์จะแสดงที่นี่"></textarea>
+      @if (form.getRawValue().removeDuplicates && result.inputCount) {
+        <div class="result-stats mt-2">
+          <span class="stat" [class.stat-warning]="result.duplicateCount > 0">Duplicates removed <b>{{ result.duplicateCount }}</b></span>
+        </div>
+      }
+    </div>
+    } @else {
+    <div class="lt-pane">
+      <div class="tc-input-head">
+        <label>Results <span class="tc-lines">{{ counts.rows.length }} values</span></label>
+        <div class="lt-output-actions">
+          <app-download-button [content]="countOutput" fileName="list-counts" [extension]="countExtension"
+            [mimeType]="countMime"></app-download-button>
+          <app-copy-button [textToCopy]="countOutput"></app-copy-button>
+        </div>
+      </div>
+
+      <!-- Stats live inside the box so it lines up with the input textarea -->
+      <div class="lt-count-box">
+        <div class="result-stats lt-count-stats">
+          <span class="stat">Total lines <b>{{ counts.totalLines }}</b></span>
+          <span class="stat">Unique values <b>{{ counts.uniqueValues }}</b></span>
+          <span class="stat" [class.stat-warning]="counts.duplicatedValues > 0">Values with duplicates <b>{{ counts.duplicatedValues }}</b></span>
+        </div>
+
+        <div class="lt-count-table">
+          @if (counts.rows.length) {
+            <table class="ec-table">
+              <thead><tr><th>Value</th><th class="lt-count-col">Count</th></tr></thead>
+              <tbody>
+                @for (row of counts.rows; track row.value) {
+                  <tr [class.lt-dup]="row.count > 1">
+                    <td>{{ row.value }}</td>
+                    <td class="lt-count-col">{{ row.count }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="wc-empty p-3 mb-0">
+              {{ counts.totalLines ? 'ไม่มีค่าที่ซ้ำ' : 'ผลลัพธ์จะแสดงที่นี่' }}
+            </p>
+          }
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+</form>

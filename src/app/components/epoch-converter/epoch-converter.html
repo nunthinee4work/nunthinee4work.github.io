@@ -1,0 +1,224 @@
+<form [formGroup]="form" class="epoch-converter">
+  <h1>Time Toolkit</h1>
+
+  <nav class="tt-tabs" role="tablist" aria-label="Time Toolkit sections">
+    @for (s of sections; track s.id) {
+      <button type="button" role="tab" [attr.aria-selected]="section === s.id" [class.active]="section === s.id"
+        (click)="setSection(s.id)">
+        <i [class]="'fa-solid ' + s.icon"></i> {{ s.label }}
+      </button>
+    }
+  </nav>
+
+  @switch (section) {
+    @case ('epoch') {
+    <div class="ec-now">
+      <div>
+        <div class="ec-now-label">Current Unix epoch time</div>
+        <div class="ec-now-value">{{ currentSeconds }}</div>
+        <div class="ec-now-sub">{{ now() }} ms</div>
+      </div>
+      <app-copy-button [textToCopy]="'' + currentSeconds"></app-copy-button>
+    </div>
+
+      <div class="ec-grid">
+      <!-- Timestamp -> date -->
+      <section class="wc-card ec-card-wide">
+        <h3>Timestamp → Human date</h3>
+        <div class="ec-row">
+          <input type="text" formControlName="timestamp" class="ec-input-lg" placeholder="เช่น 1790147109 หรือ ObjectId"
+            [class.is-invalid]="form.getRawValue().timestamp.trim() && !parsed" spellcheck="false">
+          <select formControlName="unit" class="ec-select">
+            <option value="auto">Auto unit</option>
+            <option value="s">Seconds</option>
+            <option value="ms">Milliseconds</option>
+            <option value="us">Microseconds</option>
+            <option value="ns">Nanoseconds</option>
+          </select>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="useNowTimestamp()">Now</button>
+        </div>
+
+        @if (parsed) {
+          <p class="ec-hint">
+            @if (parsed.fromObjectId) {
+              <i class="fa-solid fa-database"></i> MongoDB ObjectId — เวลาที่สร้าง document
+            } @else {
+              <i class="fa-solid fa-circle-info"></i> Assuming this timestamp is in <b>{{ unitLabels[parsed.unit] }}</b>
+            }
+          </p>
+          <table class="ec-table">
+            <tbody>
+              @for (row of timestampRows; track row.label) {
+                <tr>
+                  <th>{{ row.label }}</th>
+                  <td>{{ row.value }}</td>
+                  <td class="ec-copy"><app-copy-button [textToCopy]="row.value" [showIconOnly]="true"></app-copy-button></td>
+                </tr>
+              }
+              <tr>
+                <th>Relative</th>
+                <td>{{ relative }}</td>
+                <td class="ec-copy"><app-copy-button [textToCopy]="relative" [showIconOnly]="true"></app-copy-button></td>
+              </tr>
+            </tbody>
+          </table>
+        } @else if (form.getRawValue().timestamp.trim()) {
+          <p class="ec-error"><i class="fa-solid fa-circle-exclamation"></i> ใส่ตัวเลข timestamp หรือ ObjectId 24 ตัวอักษร</p>
+        }
+      </section>
+
+      <!-- Date -> timestamp -->
+      <section class="wc-card">
+        <h3>Human date → Timestamp</h3>
+        <div class="ec-row">
+          <input type="datetime-local" step="1" formControlName="dateTime" class="ec-input-lg">
+          <button type="button" class="btn btn-secondary btn-sm" (click)="useNowDate()">Now</button>
+        </div>
+        <div class="ec-row">
+          <select formControlName="dateZone" class="ec-select ec-select-full">
+            @for (zone of zones; track zone.id) {
+              <option [value]="zone.id">{{ zone.label }}</option>
+            }
+          </select>
+        </div>
+        @if (dateResult) {
+          <table class="ec-table">
+            <tbody>
+              <tr><th>Epoch (seconds)</th><td>{{ seconds(dateResult) }}</td>
+                <td class="ec-copy"><app-copy-button [textToCopy]="'' + seconds(dateResult)" [showIconOnly]="true"></app-copy-button></td></tr>
+              <tr><th>Milliseconds</th><td>{{ dateResult.getTime() }}</td>
+                <td class="ec-copy"><app-copy-button [textToCopy]="'' + dateResult.getTime()" [showIconOnly]="true"></app-copy-button></td></tr>
+              <tr><th>ISO 8601</th><td>{{ dateResult.toISOString() }}</td>
+                <td class="ec-copy"><app-copy-button [textToCopy]="dateResult.toISOString()" [showIconOnly]="true"></app-copy-button></td></tr>
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <!-- Start / end of period -->
+      <section class="wc-card">
+        <div class="wc-card-head">
+          <h3>Start &amp; end of</h3>
+          <select formControlName="rangeZone" class="ec-select">
+            @for (zone of zones; track zone.id) {
+              <option [value]="zone.id">{{ zone.label }}</option>
+            }
+          </select>
+        </div>
+        <p class="ec-hint">ของวันที่จาก "Human date" (หรือ timestamp ด้านบน)</p>
+        <table class="ec-table">
+          <thead><tr><th></th><th>Start</th><th>End</th></tr></thead>
+          <tbody>
+            @for (range of ranges; track range.period) {
+              <tr>
+                <th class="text-capitalize">{{ range.period }}</th>
+                <td>{{ seconds(range.start) }} <app-copy-button [textToCopy]="'' + seconds(range.start)" [showIconOnly]="true"></app-copy-button></td>
+                <td>{{ seconds(range.end) }} <app-copy-button [textToCopy]="'' + seconds(range.end)" [showIconOnly]="true"></app-copy-button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Batch -->
+      <section class="wc-card">
+        <div class="wc-card-head">
+          <h3>Batch convert</h3>
+          @if (batchRows.length) {
+            <app-copy-button [textToCopy]="batchCsv"></app-copy-button>
+          }
+        </div>
+        <textarea formControlName="batch" class="ec-batch" placeholder="วาง timestamp หรือ ObjectId ทีละบรรทัด" spellcheck="false"></textarea>
+        @if (batchRows.length) {
+          <div class="ec-batch-result">
+            <table class="ec-table">
+              <tbody>
+                @for (row of batchRows; track $index) {
+                  <tr [class.ec-invalid]="!row.ok">
+                    <th>{{ row.input }}</th>
+                    <td>{{ row.utc }}<div class="ec-sub">{{ row.bangkok }}</div></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+      </div>
+    }
+
+    @case ('duration') {
+      <div class="ec-grid">
+      <!-- Hours between two times -->
+      <section class="wc-card">
+        <h3>Hours between two times</h3>
+        <div class="ec-row ec-span-inputs">
+          <label>
+            <span>Start</span>
+            <input type="time" formControlName="fromTime" step="60">
+          </label>
+          <i class="fa-solid fa-arrow-right"></i>
+          <label>
+            <span>End</span>
+            <input type="time" formControlName="toTime" step="60">
+          </label>
+          <label>
+            <span>Break (min)</span>
+            <input type="number" min="0" formControlName="breakMinutes" placeholder="0">
+          </label>
+        </div>
+        @if (timeSpan; as span) {
+          <p class="ec-duration">
+            {{ to12Hour(form.getRawValue().fromTime) }} → {{ to12Hour(form.getRawValue().toTime) }} = {{ span.human }}
+          </p>
+          @if (span.overnight) {
+            <p class="ec-hint"><i class="fa-solid fa-moon"></i> เวลาสิ้นสุดน้อยกว่าเวลาเริ่ม — นับข้ามเที่ยงคืนไปวันถัดไป</p>
+          }
+          <table class="ec-table">
+            <tbody>
+              <tr><th>Hours</th><td>{{ span.hours }}</td>
+                <td class="ec-copy"><app-copy-button [textToCopy]="span.hours" [showIconOnly]="true"></app-copy-button></td></tr>
+              <tr><th>Minutes</th><td>{{ span.minutes }}</td>
+                <td class="ec-copy"><app-copy-button [textToCopy]="span.minutes" [showIconOnly]="true"></app-copy-button></td></tr>
+              <tr><th>Seconds</th><td>{{ formatNumber(span.seconds) }}</td>
+                <td class="ec-copy"><app-copy-button [textToCopy]="'' + span.seconds" [showIconOnly]="true"></app-copy-button></td></tr>
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <!-- Time unit converter -->
+      <section class="wc-card">
+        <h3>Time unit converter</h3>
+        <div class="ec-row">
+          <input type="number" formControlName="duration" class="ec-input-lg" placeholder="เช่น 1800">
+          <select formControlName="durationUnit" class="ec-select">
+            @for (unit of timeUnits; track unit.id) {
+              <option [value]="unit.id">{{ unit.label }}</option>
+            }
+          </select>
+        </div>
+        @if (conversions; as c) {
+          <p class="ec-duration">{{ formatNumber(c.value) }} {{ c.fromLabel }} = {{ c.human }}</p>
+          <table class="ec-table">
+            <tbody>
+              @for (result of c.results; track result.id) {
+                <tr>
+                  <th>{{ result.label }}</th>
+                  <td>{{ formatNumber(result.value) }}</td>
+                  <td class="ec-copy"><app-copy-button [textToCopy]="'' + result.value" [showIconOnly]="true"></app-copy-button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <p class="ec-hint mt-2 mb-0">month / year ใช้ค่าเฉลี่ย (30.44 / 365.2425 วัน)</p>
+        }
+      </section>
+      </div>
+    }
+
+    @case ('cron') {
+      <app-cron-schedule [embedded]="true" />
+    }
+  }
+</form>

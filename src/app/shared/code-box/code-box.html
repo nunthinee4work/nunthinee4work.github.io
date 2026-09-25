@@ -1,0 +1,13 @@
+<div class="code-container">
+  <div class="code-actions">
+    <app-download-button *ngIf="fileName" [content]="formatCodeText(codeText)" [fileName]="fileName"
+      [extension]="extension" [mimeType]="mimeType"></app-download-button>
+    <button type="button" (click)="copyToClipboard()" class="copy-btn" [disabled]="copied">
+      <i [ngClass]="copied ? 'fa-solid fa-check' : 'fa-regular fa-copy'" class="me-1"></i>
+      {{ copied ? 'Copied!' : 'Copy' }}
+    </button>
+  </div>
+  <div class="code-content">
+    {{ formatCodeText(codeText) }}
+  </div>
+</div>

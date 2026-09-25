@@ -1,0 +1,296 @@
+<form [formGroup]="dispatchForm" (ngSubmit)="onSubmit()">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">
+      Generate Payload Dispatch Order
+      <span *ngIf="dispatchForm.value.orderFlow">({{ dispatchForm.value.orderFlow == 'CROSS_DOCK' ? 'Cross Dock' :
+        'KeepStock' }})</span>
+    </h1>
+    <button type="button" class="btn btn-outline-primary" (click)="openModal()">Show Tote Codes</button>
+  </div>
+
+  <div class="form-group mode-picker">
+    <label for="orderFlow" class="text-xl"><i class="fa-solid fa-route"></i>Order Flow :</label>
+    <ng-select [items]="orderFlows" bindLabel="name" bindValue="id" placeholder="Select order flow"
+      formControlName="orderFlow" class="custom-ng-select"
+      [class.is-invalid]="dispatchForm.get('orderFlow')?.invalid && dispatchForm.get('orderFlow')?.touched"
+      (change)="onChangedOrderFlow()">
+    </ng-select>
+  </div>
+
+  <div class="form-group mode-picker">
+    <label for="mode" class="text-xl"><i class="fa-solid fa-sliders"></i>Mode :</label>
+    <ng-select [items]="modes" bindLabel="name" bindValue="id" placeholder="Select mode" formControlName="mode"
+      class="custom-ng-select" (change)="onChangedMode()"
+      [class.is-invalid]="dispatchForm.get('mode')?.invalid && dispatchForm.get('mode')?.touched">
+    </ng-select>
+  </div>
+
+  <p><b>Step1:</b> Go to mongodb collection <b>order.delivery_orders</b> then right click at your document and select
+    copy > <b>Copy Value as Plain Text</b></p>
+  <p class="mb-2"><b>Step2:</b> Paste your Delivery Order here</p>
+  <div class="input-hint">
+    <i class="fa-solid fa-circle-info"></i>
+    <div>
+      วางได้หลาย Delivery Order ในกล่องเดียว ไม่ต้องกด Add Delivery Order — รองรับ 3 รูปแบบ:
+      <code>{{ '{' }} ... {{ '}' }}</code>
+      <code>{{ '{' }} ... {{ '}' }}, {{ '{' }} ... {{ '}' }}</code>
+      <code>[{{ '{' }} ... {{ '}' }}, {{ '{' }} ... {{ '}' }}]</code>
+    </div>
+  </div>
+
+  <div formArrayName="deliveryOrders">
+    <ng-container *ngFor="let ctrl of deliveryOrders.controls; let i = index">
+      <div [formGroupName]="i" class="textarea-row">
+        <app-json-editor class="textarea-flex" formControlName="value" [list]="true" itemLabel="delivery order"
+          placeholder="Paste Delivery Order JSON here" (valueChange)="onChangedInputDelivery(i)"
+          [invalid]="!!(ctrl.get('value')?.invalid && ctrl.get('value')?.touched)"></app-json-editor>
+
+        <button type="button" class="btn btn-danger btn-sm ms-2" (click)="removeDeliveryOrder(i)"
+          *ngIf="deliveryOrders.length > 1">–</button>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- <div *ngIf="dispatchForm.value.orderFlow == 'CROSS_DOCK'">
+    <button type="button" class="btn btn-primary btn-sm mt-2" (click)="addDeliveryOrder()">+ Add Delivery Order</button>
+  </div> -->
+
+  <div class="radio-group" *ngIf="dispatchForm.value.orderFlow === 'CROSS_DOCK'">
+    <label>Price Date Source:</label>
+    <label>
+      <input type="radio" formControlName="priceDateSource" value="MANUAL" />
+      Manual
+    </label>
+    <label>
+      <input type="radio" formControlName="priceDateSource" value="QUERY" />
+      Query Database
+    </label>
+  </div>
+
+  <div class="mt-3"
+    *ngIf="dispatchForm.value.orderFlow == 'CROSS_DOCK' && dispatchForm.value.priceDateSource === 'QUERY'">
+    <p><b>Step3:</b> Copy the Mongo query below to retrieve the price date in collection <b>stock.external_prices</b> >
+      <b>Copy Value as Plain Text</b>
+    </p>
+    <app-code-box [codeText]="queryExternalPriceString"></app-code-box>
+
+    <p class="mt-3"><b>Step4:</b> Paste your result of external prices here</p>
+    <textarea formControlName="externalPrice" placeholder="Paste external prices result here"
+      [class.is-invalid]="dispatchForm.get('externalPrice')?.invalid && dispatchForm.get('externalPrice')?.touched"
+      class="form-control textarea-flex"></textarea>
+  </div>
+
+  <hr class="mt-4">
+
+  <div *ngIf="dispatchForm.value.mode === 'SINGLE_TOTE'">
+    <div class="form-group">
+      <label for="toteId">ToteId:</label>
+      <input type="text" id="toteId" formControlName="toteId" placeholder="Enter ToteId"
+        [class.is-invalid]="dispatchForm.get('toteId')?.invalid && dispatchForm.get('toteId')?.touched">
+      <small class="form-text text-muted ms-2">เช่น TB990001</small>
+    </div>
+  </div>
+
+  <div *ngIf="dispatchForm.value.mode === 'RANDOM_TOTE' || dispatchForm.value.mode === 'SPECIFY_TOTE'">
+    <h3 class="section-title"><i class="fa-solid fa-box"></i>Tote ID</h3>
+    <div *ngIf="dispatchForm.value.mode === 'SPECIFY_TOTE'" class="form-group">
+      <label for="specifyToteCode">Prefix Tote Code:</label>
+      <input type="text" id="specifyToteCode" formControlName="specifyToteCode" placeholder="Enter Tote Code"
+        [class.is-invalid]="dispatchForm.get('specifyToteCode')?.invalid && dispatchForm.get('specifyToteCode')?.touched">
+      <small class="form-text text-muted" style="margin-left: 10px;">
+        เช่น TDS,TLS,TMS,TSS → running ให้เอง: TDS{{ dispatchForm.value.subfixToteCode }}01, TLS{{ dispatchForm.value.subfixToteCode }}02 …
+      </small>
+    </div>
+
+    <!-- 'Auto – My Prefix' always uses the current-time suffix + running from 1, so no toggle there -->
+    <div class="form-group" [hidden]="dispatchForm.value.mode === 'SPECIFY_TOTE'">
+      <label class="tote-custom-toggle">
+        <input type="checkbox" formControlName="customToteCode">
+        กำหนด Subfix Tote Code และเลขเริ่มต้นเอง
+      </label>
+      @if (!dispatchForm.value.customToteCode) {
+        <small class="form-text text-muted">
+          ใช้ค่าเริ่มต้น: Subfix <b>{{ dispatchForm.value.subfixToteCode }}</b> (วันเวลาปัจจุบัน yyyyMMddHHmm) · เริ่มที่ <b>{{ dispatchForm.value.startRunningNumber }}</b>
+          → เช่น TB{{ dispatchForm.value.subfixToteCode }}01
+        </small>
+      }
+    </div>
+
+    <div class="form-group" [hidden]="!dispatchForm.value.customToteCode">
+      <label for="subfixToteCode">Subfix Tote Code:</label>
+      <input type="text" id="subfixToteCode" formControlName="subfixToteCode" placeholder="Enter Tote Code"
+        [class.is-invalid]="dispatchForm.get('subfixToteCode')?.invalid && dispatchForm.get('subfixToteCode')?.touched">
+      <small class="form-text text-muted" style="margin-left: 10px;">เลขก่อน running number จะใส่หรือไม่ใส่ก็ได้ เช่น
+        9999 -> TB9999xx (xx คือ running number)</small>
+    </div>
+
+    <div class="form-group" [hidden]="!dispatchForm.value.customToteCode">
+      <label for="startRunningNumber">Start Running Number:</label>
+      <input type="number" id="startRunningNumber" formControlName="startRunningNumber"
+        placeholder="Enter Start Running Number"
+        [class.is-invalid]="dispatchForm.get('startRunningNumber')?.invalid && dispatchForm.get('startRunningNumber')?.touched">
+      <small class="form-text text-muted" style="margin-left: 10px;">เช่น 1 จะได้ 01, 02 … (ถ้าเกิน 99 จะเป็น 001, 002 …) generate tote Id
+        ตั้งแต่ 1 - n (ตามจำนวน items ใน do)</small>
+    </div>
+  </div>
+
+  <div *ngIf="items.value.length > 0">
+    <div class="tote-header">
+      <h3 class="section-heading"><i class="fa-solid fa-table-list"></i>Tote Details</h3>
+      <button *ngIf="dispatchForm.value.mode === 'RANDOM_TOTE' || dispatchForm.value.mode === 'SPECIFY_TOTE'"
+        type="button" class="btn-soft" (click)="onPreviewToteDetail()" title="สุ่ม / สร้าง Tote ID ใหม่ทั้งหมด">
+        <i class="fa-solid fa-rotate"></i>Re-Generate
+      </button>
+    </div>
+    <form [formGroup]="toteForm">
+      @if (duplicateToteIds.size > 0) {
+        <div class="notification error">
+          <i class="fa-solid fa-triangle-exclamation me-1"></i>
+          Tote ID ซ้ำกันคนละ DO — ตรวจสอบก่อน Export CSV:
+          @for (entry of duplicateToteIds; track entry[0]) {
+            <b class="ms-1">{{ entry[0] }}</b> ({{ entry[1].join(', ') }})
+          }
+        </div>
+      }
+      <div class="table-responsive">
+        <table class="table table-bordered tote-table">
+          <thead>
+            <tr>
+              <th class="text-center">Delivery Order No.</th>
+              <th class="text-center">Product Name</th>
+              <th class="text-center">Barcode</th>
+              <th class="text-center">Assigned Qty</th>
+              <th class="text-center">Unit</th>
+              <th class="text-center" *ngIf="dispatchForm.value.orderFlow == 'CROSS_DOCK'">Price Date</th>
+              <th class="text-center">Pick Details</th>
+            </tr>
+          </thead>
+          <tbody formArrayName="items">
+            <tr *ngFor="let item of items.controls; let i = index" [formGroupName]="i">
+              <td>{{ item.get('doNo')?.value }}</td>
+              <td>{{ item.get('productName')?.value }}</td>
+              <td style="white-space: nowrap;">
+                {{ item.get('barcode')?.value }}
+                <app-copy-button [textToCopy]="item.get('barcode')?.value" [showIconOnly]="true"></app-copy-button>
+              </td>
+              <td class="text-center">
+                <strong>{{ item.get('assignedQty')?.value }}</strong> ({{ item.get('assignedQty')?.value *
+                item.get('unitFactor')?.value }} PC)
+              </td>
+              <td class="text-center">{{ item.get('unit')?.value }}</td>
+              <td class="text-center price-date-cell" *ngIf="dispatchForm.value.orderFlow == 'CROSS_DOCK'">
+                <input type="text" class="form-control" formControlName="priceDate" placeholder="Price Date"
+                  [class.is-invalid]="item.get('priceDate')?.invalid && item.get('priceDate')?.touched">
+              </td>
+              <td class="pick-details-cell">
+                <table class="table table-sm table-borderless" formArrayName="details">
+                  <tbody>
+                    <tr *ngFor="let d of getDetails(i).controls; let j = index" [formGroupName]="j" class="pick-detail-row">
+                      <td colspan="3">
+                        <div class="pick-detail">
+                          <input type="text" class="form-control" formControlName="pickQty" placeholder="Pick Qty"
+                            [class.is-invalid]="d.get('pickQty')?.invalid && d.get('pickQty')?.touched">
+                          <input type="text" class="form-control" formControlName="toteId" placeholder="Tote ID"
+                            [class.is-invalid]="(d.get('toteId')?.invalid && d.get('toteId')?.touched) || duplicateToteOtherDos(d.get('toteId')?.value, item.get('doNo')?.value).length > 0" />
+                          <app-copy-button [textToCopy]="d.get('toteId')?.value" [showIconOnly]="true"></app-copy-button>
+                          <button type="button" class="btn btn-danger btn-sm" *ngIf="getDetails(i).length > 1"
+                            (click)="removeDetail(i, j)">–</button>
+                        </div>
+                        @if (duplicateToteOtherDos(d.get('toteId')?.value, item.get('doNo')?.value); as others) {
+                          @if (others.length) {
+                            <div class="tote-duplicate">
+                              <i class="fa-solid fa-triangle-exclamation"></i> ซ้ำกับ {{ others.join(', ') }}
+                            </div>
+                          }
+                        }
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="3">
+                        <button type="button" class="btn btn-primary btn-sm" (click)="addDetail(i)">
+                          + Split Tote
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </div>
+
+  <h3 class="section-title"><i class="fa-solid fa-truck"></i>Fill in Shipment information</h3>
+  <div class="form-group">
+    <label for="platNo">Plat No:</label>
+    <input type="text" id="platNo" formControlName="platNo" placeholder="Enter PlatNo"
+      [class.is-invalid]="dispatchForm.get('platNo')?.invalid && dispatchForm.get('platNo')?.touched">
+  </div>
+
+  <div class="form-group">
+    <label for="driverName">Driver Name:</label>
+    <input type="text" id="driverName" formControlName="driverName" placeholder="Enter DriverName"
+      [class.is-invalid]="dispatchForm.get('driverName')?.invalid && dispatchForm.get('driverName')?.touched">
+  </div>
+
+  <div class="mt-4">
+    <!-- <button type="button" class="btn btn-secondary me-2" (click)="onPreview()"
+      [disabled]="dispatchForm.value.mode === 'CUSTOM_TOTE'">
+      Preview</button> -->
+    <button type="button" class="btn btn-primary me-2" (click)="onSubmit()" data-primary-action>
+      {{dispatchForm.get('orderFlow')?.value ==
+      'KEEP_STOCK' ? 'Generate Payload' : 'Export CSV'}}</button>
+    <button type="button" class="btn btn-danger" (click)="clearData()">Clear</button>
+  </div>
+
+  <!-- Divider only when payload output follows -->
+  <hr class="mt-5" *ngIf="confirmToteData || confirmShipmentData">
+</form>
+
+<div *ngIf="confirmToteData">
+  <h3>Payload Confirm Tote Output:</h3>
+  <app-code-box [codeText]="confirmToteData"></app-code-box>
+</div>
+
+<div *ngIf="confirmShipmentData" class="mt-3">
+  <h3>Payload Confirm Shipment Output:</h3>
+  <app-code-box [codeText]="confirmShipmentData"></app-code-box>
+</div>
+
+<div class="modal fade" id="totePreviewTDModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">รายการ Tote</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered table-striped tote-list-table">
+          <thead>
+            <tr>
+              <th class="tote-no">No.</th>
+              <th>Tote Code</th>
+              <th>Tote Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tote of prefixToteList; let n = index">
+              <td class="tote-no">{{ n + 1 }}</td>
+              <td>
+                <button type="button" class="tote-code-copy" [class.copied]="copiedToteCode === tote.code"
+                  (click)="copyToteCode(tote.code)" [title]="'Copy ' + tote.code">
+                  {{ tote.code }}
+                  <i class="fa-regular" [class.fa-copy]="copiedToteCode !== tote.code"
+                    [class.fa-circle-check]="copiedToteCode === tote.code"></i>
+                </button>
+              </td>
+              <td>{{ tote.nameTh }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

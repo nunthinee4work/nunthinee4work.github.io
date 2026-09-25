@@ -1,0 +1,166 @@
+<form [formGroup]="form" class="text-compare">
+  <div class="jv-header">
+    @if (!embedded) {
+      <h1 class="mb-0">Text Compare</h1>
+    }
+    <div class="jv-view-switch" role="group" aria-label="Diff layout">
+      <button type="button" [class.active]="view === 'split'" (click)="setView('split')">
+        <i class="fa-solid fa-table-columns"></i> Split
+      </button>
+      <button type="button" [class.active]="view === 'unified'" (click)="setView('unified')">
+        <i class="fa-solid fa-bars"></i> Unified
+      </button>
+    </div>
+  </div>
+
+  <div class="tc-inputs">
+    <div class="tc-input">
+      <div class="tc-input-head">
+        <label for="tc-left">Original text <span class="tc-lines">{{ leftLineCount }} lines</span></label>
+        <button type="button" class="json-editor-tool" (click)="formatJson('left')" title="Pretty-print this side as JSON">
+          <i class="fa-solid fa-align-left"></i> Format JSON
+        </button>
+      </div>
+      <textarea id="tc-left" formControlName="left" spellcheck="false" placeholder="วางข้อความต้นฉบับ"
+        [class.is-invalid]="jsonErrors.left"></textarea>
+      @if (jsonErrors.left) {
+        <div class="tc-json-error"><i class="fa-solid fa-circle-exclamation"></i> {{ jsonErrors.left }}</div>
+      }
+    </div>
+    <button type="button" class="tc-swap" (click)="swap()" title="Swap sides">
+      <i class="fa-solid fa-right-left"></i>
+    </button>
+    <div class="tc-input">
+      <div class="tc-input-head">
+        <label for="tc-right">Changed text <span class="tc-lines">{{ rightLineCount }} lines</span></label>
+        <button type="button" class="json-editor-tool" (click)="formatJson('right')" title="Pretty-print this side as JSON">
+          <i class="fa-solid fa-align-left"></i> Format JSON
+        </button>
+      </div>
+      <textarea id="tc-right" formControlName="right" spellcheck="false" placeholder="วางข้อความที่แก้ไขแล้ว"
+        [class.is-invalid]="jsonErrors.right"></textarea>
+      @if (jsonErrors.right) {
+        <div class="tc-json-error"><i class="fa-solid fa-circle-exclamation"></i> {{ jsonErrors.right }}</div>
+      }
+    </div>
+  </div>
+
+  <div class="tc-actions">
+    <button type="button" class="btn btn-primary" (click)="compare()" data-primary-action>
+      <i class="fa-solid fa-code-compare me-1"></i> Find Difference
+    </button>
+    <button type="button" class="btn btn-secondary" (click)="formatJson('both')" title="Pretty-print both sides as JSON">
+      <i class="fa-solid fa-align-left me-1"></i> Format JSON
+    </button>
+    <button type="button" class="btn btn-danger" (click)="clear()">Clear</button>
+
+    <div class="radio-group tc-options">
+      <label><input type="checkbox" formControlName="realtime" />Real-time</label>
+      <label><input type="checkbox" formControlName="ignoreWhitespace" />Ignore whitespace</label>
+      <label><input type="checkbox" formControlName="ignoreCase" />Ignore case</label>
+      <label><input type="checkbox" formControlName="collapse" />Collapse unchanged</label>
+      <label title="Format JSON orders object keys A→Z so key order doesn't show as a difference">
+        <input type="checkbox" formControlName="sortKeys" />Sort JSON keys
+      </label>
+    </div>
+  </div>
+
+  @if (result) {
+    <div class="tc-summary">
+      @if (result.identical) {
+        @let info = identicalInfo;
+        <div class="tc-identical" [class.tc-identical-soft]="!info.exact">
+          <div class="tc-identical-icon">
+            <i class="fa-solid" [class.fa-check]="info.exact" [class.fa-equals]="!info.exact"></i>
+          </div>
+          <div class="tc-identical-body">
+            <div class="tc-identical-title">ไม่พบความแตกต่าง</div>
+            @if (info.exact) {
+              <div class="tc-identical-detail">
+                ทั้งสองฝั่งตรงกันทุกตัวอักษร · {{ info.lines }} บรรทัด · {{ info.chars.toLocaleString() }} ตัวอักษร
+              </div>
+            } @else {
+              <div class="tc-identical-detail">
+                เหมือนกันเมื่อไม่นับ{{ info.ignored.join(' และ ') }} — ข้อความจริงยังต่างกันอยู่
+              </div>
+              <button type="button" class="json-editor-tool mt-2" (click)="showAllDifferences()">
+                <i class="fa-solid fa-eye"></i> แสดงความต่างทั้งหมด
+              </button>
+            }
+          </div>
+        </div>
+      } @else {
+        <span class="tc-stat tc-stat-removed">− {{ result.removals }} removal{{ result.removals === 1 ? '' : 's' }}</span>
+        <span class="tc-stat tc-stat-added">+ {{ result.additions }} addition{{ result.additions === 1 ? '' : 's' }}</span>
+      }
+    </div>
+
+    @if (!result.identical) {
+      <div class="tc-result table-responsive">
+        @if (view === 'split') {
+          <table class="tc-table tc-split">
+            <colgroup><col class="tc-num-col"><col><col class="tc-num-col"><col></colgroup>
+            <tbody>
+              @for (row of displayRows; track $index) {
+                @if (isFold(row)) {
+                  <tr class="tc-fold"><td colspan="4">
+                    <button type="button" (click)="expandFold(row.id)">
+                      <i class="fa-solid fa-arrows-up-down"></i> {{ row.rows.length }} unchanged lines
+                    </button>
+                  </td></tr>
+                } @else {
+                  @let r = asDiff(row);
+                  <tr [class]="'tc-row tc-' + r.type">
+                    <td class="tc-num">{{ r.left?.num }}</td>
+                    <td class="tc-code tc-left" [class.tc-empty]="!r.left">@if (r.left) {<span class="tc-sign">{{ r.type === 'equal' ? ' ' : '−' }}</span>@for (part of partsOf(r.left); track $index) {<span [class.tc-word-removed]="part.changed">{{ part.text }}</span>}}</td>
+                    <td class="tc-num">{{ r.right?.num }}</td>
+                    <td class="tc-code tc-right" [class.tc-empty]="!r.right">@if (r.right) {<span class="tc-sign">{{ r.type === 'equal' ? ' ' : '+' }}</span>@for (part of partsOf(r.right); track $index) {<span [class.tc-word-added]="part.changed">{{ part.text }}</span>}}</td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        } @else {
+          <table class="tc-table tc-unified">
+            <colgroup><col class="tc-num-col"><col class="tc-num-col"><col></colgroup>
+            <tbody>
+              @for (row of displayRows; track $index) {
+                @if (isFold(row)) {
+                  <tr class="tc-fold"><td colspan="3">
+                    <button type="button" (click)="expandFold(row.id)">
+                      <i class="fa-solid fa-arrows-up-down"></i> {{ row.rows.length }} unchanged lines
+                    </button>
+                  </td></tr>
+                } @else {
+                  @let r = asDiff(row);
+                  @if (r.type === 'equal') {
+                    <tr class="tc-row tc-equal">
+                      <td class="tc-num">{{ r.left?.num }}</td>
+                      <td class="tc-num">{{ r.right?.num }}</td>
+                      <td class="tc-code"><span class="tc-sign"> </span><span>{{ r.left?.text }}</span></td>
+                    </tr>
+                  } @else {
+                    @if (r.left) {
+                      <tr class="tc-row tc-delete">
+                        <td class="tc-num">{{ r.left.num }}</td>
+                        <td class="tc-num"></td>
+                        <td class="tc-code tc-left"><span class="tc-sign">−</span>@for (part of partsOf(r.left); track $index) {<span [class.tc-word-removed]="part.changed">{{ part.text }}</span>}</td>
+                      </tr>
+                    }
+                    @if (r.right) {
+                      <tr class="tc-row tc-insert">
+                        <td class="tc-num"></td>
+                        <td class="tc-num">{{ r.right.num }}</td>
+                        <td class="tc-code tc-right"><span class="tc-sign">+</span>@for (part of partsOf(r.right); track $index) {<span [class.tc-word-added]="part.changed">{{ part.text }}</span>}</td>
+                      </tr>
+                    }
+                  }
+                }
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
+  }
+</form>

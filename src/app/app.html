@@ -1,0 +1,210 @@
+<div class="app-layout" [class.sidebar-collapsed]="sidebarCollapsed">
+  <aside class="sidebar">
+    <div class="brand">
+      <img class="brand-logo" src="favicon-64.png" alt="" width="34" height="34">
+      <div class="brand-text">Galaxy Utils<small>CJX / TD Shop tools</small></div>
+      <button type="button" class="icon-btn collapse-toggle" (click)="toggleSidebar()"
+        [title]="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+        <i class="fa-solid" [ngClass]="sidebarCollapsed ? 'fa-angles-right' : 'fa-angles-left'"></i>
+      </button>
+    </div>
+
+    <div class="nav-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input #searchInput type="text" placeholder="Search tools" [value]="searchText"
+        (input)="searchText = searchInput.value" (keydown.enter)="onSearchEnter()" (keydown.escape)="clearSearch()">
+      <kbd>{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
+    </div>
+
+    <nav class="tabs">
+      @for (group of sidebarGroups; track group.label) {
+        <div class="nav-group">{{ group.label }}</div>
+        @for (tab of group.tabs; track tab.id) {
+          <a class="tab" [href]="'#' + tab.id" [class.active]="activeTab === tab.id" [title]="tab.label"
+            [class.recent-tab]="group.label === 'Recent'"
+            (click)="$event.preventDefault(); openTab(tab.id, $event)">
+            <i class="fa-solid" [ngClass]="tab.icon"></i><span class="tab-label">{{ tab.label }}</span>
+            <span class="pin-btn" role="button" [class.pinned]="isPinned(tab.id)"
+              [title]="isPinned(tab.id) ? 'Unpin' : 'Pin to top'" (click)="togglePin(tab.id, $event)">
+              <i class="fa-solid fa-thumbtack"></i>
+            </span>
+          </a>
+        }
+        @if (group.shortcut) {
+          <div class="nav-divider"></div>
+        }
+      } @empty {
+        <div class="nav-empty">No tools match "{{ searchText }}"</div>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      @if (identity) {
+        <div class="account-row">
+          <i class="fa-solid fa-circle-user account-icon" [title]="identity.name || identity.email"></i>
+          <span class="tab-label account-email" [title]="identity.email">{{ accountName }}</span>
+          <a class="icon-btn logout-btn" [href]="logoutUrl" title="Log out">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </a>
+        </div>
+      }
+      <button type="button" class="icon-btn theme-toggle" (click)="toggleTheme()"
+        [title]="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+        <i class="fa-solid" [ngClass]="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+        <span class="tab-label">{{ darkMode ? 'Light mode' : 'Dark mode' }}</span>
+      </button>
+    </div>
+  </aside>
+
+<main class="app-main">
+<div class="tab-content active">
+  <div id="content-area">
+    @switch (activeTab) {
+      @case ('dispatchOrder') {
+        @defer (on immediate) {
+          <app-dispatch-order />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('tdDispatchOrder') {
+        @defer (on immediate) {
+          <app-td-dispatch-order />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('thaiLocaleCompare') {
+        @defer (on immediate) {
+          <app-thai-locale-compare />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('arrayFormatter') {
+        @defer (on immediate) {
+          <app-array-formatter />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('unicodeConverter') {
+        @defer (on immediate) {
+          <app-unicode-converter />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('createStockCountRequest') {
+        @defer (on immediate) {
+          <app-create-stock-count-request />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('createStockCountGroup') {
+        @defer (on immediate) {
+          <app-create-stock-count-group />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('createShelf') {
+        @defer (on immediate) {
+          <app-create-shelf />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('createRefillRecommmendation') {
+        @defer (on immediate) {
+          <app-create-refill-recommmendation />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('productTag') {
+        @defer (on immediate) {
+          <app-product-tag />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('barcodeGenerator') {
+        @defer (on immediate) {
+          <app-barcode-generator />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+      
+      @case ('jsonViewer') {
+        @defer (on immediate) {
+          <app-json-viewer />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('textCompare') {
+        @defer (on immediate) {
+          <app-text-compare />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('wordCounter') {
+        @defer (on immediate) {
+          <app-word-counter />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('timeConverter') {
+        @defer (on immediate) {
+          <app-epoch-converter />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('cronSchedule') {
+        @defer (on immediate) {
+          <app-cron-schedule />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('listTools') {
+        @defer (on immediate) {
+          <app-list-tools />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+
+      @case ('textToolkit') {
+        @defer (on immediate) {
+          <app-text-toolkit />
+        } @loading (after 150ms; minimum 300ms) {
+          <div class="tool-loading"><span class="spinner"></span>Loading…</div>
+        }
+      }
+    }
+  </div>
+</div>
+</main>
+</div>
