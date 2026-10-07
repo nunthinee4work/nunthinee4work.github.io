@@ -1,8 +1,8 @@
 import { NgSelectComponent } from '@ng-select/ng-select';
-import { AfterViewInit, Component, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Clipboard } from '@angular/cdk/clipboard';
+import { ClipboardUtils } from '../../utils/clipboard.utils';
 import { ToastrService } from 'ngx-toastr';
 import { DateUtils } from '../../utils/date.utils';
 import { EpochUtils } from '../../utils/epoch.utils';
@@ -162,17 +162,22 @@ export class DispatchOrder implements OnInit, AfterViewInit {
 
   constructor(private fb: FormBuilder,
     private toastr: ToastrService,
-    private clipboard: Clipboard
+    private cdr: ChangeDetectorRef
   ) { }
 
   /** Tote code just copied from the "รายการ Tote" list (shows a check for a moment) */
   copiedToteCode: string | null = null
 
-  copyToteCode(code: string): void {
-    this.clipboard.copy(code)
+  async copyToteCode(code: string, button: HTMLElement): Promise<void> {
+    if (!await ClipboardUtils.copy(code, button)) {
+      this.toastr.error(`Copy ${code} ไม่สำเร็จ`)
+      return
+    }
     this.copiedToteCode = code
+    this.cdr.markForCheck()
     setTimeout(() => {
       if (this.copiedToteCode === code) this.copiedToteCode = null
+      this.cdr.markForCheck()
     }, 1500)
   }
 

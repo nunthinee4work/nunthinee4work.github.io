@@ -280,7 +280,7 @@
               <td class="tote-no">{{ n + 1 }}</td>
               <td>
                 <button type="button" class="tote-code-copy" [class.copied]="copiedToteCode === tote.code"
-                  (click)="copyToteCode(tote.code)" [title]="'Copy ' + tote.code">
+                  #toteBtn (click)="copyToteCode(tote.code, toteBtn)" [title]="'Copy ' + tote.code">
                   {{ tote.code }}
                   <i class="fa-regular" [class.fa-copy]="copiedToteCode !== tote.code"
                     [class.fa-circle-check]="copiedToteCode === tote.code"></i>
