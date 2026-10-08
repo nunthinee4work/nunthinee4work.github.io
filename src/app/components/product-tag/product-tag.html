@@ -21,6 +21,13 @@
       [class.is-invalid]="productTagForm.get('barcode')?.invalid && productTagForm.get('barcode')?.touched">
   </div>
 
+  <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR'">
+    <label for="retailPrice">Retail Price:</label>
+    <input type="text" id="retailPrice" formControlName="retailPrice" placeholder="Enter Retail Price" inputmode="decimal"
+      [class.is-invalid]="productTagForm.get('retailPrice')?.invalid && productTagForm.get('retailPrice')?.touched">
+    <span class="ms-2 d-inline-block">Optional, e.g. 59.50 (encoded as 5950)</span>
+  </div>
+
   <div class="form-group" *ngIf="productTagForm.value.type === 'REGULAR' || productTagForm.value.type === 'PROMOTION'">
     <label for="shelfNo">Shelf No:</label>
     <input type="text" id="shelfNo" formControlName="shelfNo" placeholder="Enter shelfNo"

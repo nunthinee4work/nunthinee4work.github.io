@@ -43,6 +43,7 @@ export class ProductTag {
       type: [null, Validators.required],
       articleNo: ['', Validators.required],
       barcode: ['', Validators.required],
+      retailPrice: ['', Validators.pattern(/^\d+(\.\d{1,2})?$/)],
       shelfNo: [''],
       masterId: ['', Validators.required],
       version: ['', Validators.required],
@@ -131,12 +132,21 @@ export class ProductTag {
     this.appendText(sb, QrCodeDescription.PRODUCT_TAG_TYPE, "01");
     this.appendText(sb, QrCodeDescription.ARTICLE_NO, data.articleNo);
     this.appendText(sb, QrCodeDescription.BARCODE, data.barcode);
+    this.appendText(sb, QrCodeDescription.RETAIL_PRICE, this.formatRetailPrice(data.retailPrice));
     this.appendText(sb, QrCodeDescription.SHELF_NO, data.shelfNo);
     this.appendText(sb, QrCodeDescription.MASTER_ID, data.masterId.toString());
     this.appendText(sb, QrCodeDescription.VERSION, data.version.toString());
     this.appendText(sb, QrCodeDescription.BAY_INFO, this.buildBayInfo(data.bayNo, data.bayLevel, data.locationId));
 
     return sb.join("");
+  }
+
+  /** 59.5 → "5950" (last 2 digits are satang, see parseRetailPrice); blank → field omitted. */
+  formatRetailPrice(price?: string | number | null): string | null {
+    if (price == null || String(price).trim() === '') {
+      return null;
+    }
+    return String(Math.round(Number(price) * 100));
   }
 
   generatePromotionTag(data: PriceTagPrintProjection): string {
@@ -244,6 +254,11 @@ export class ProductTag {
 
     });
 
+    const retailPrice = this.phraseResult?.retailPrice;
+    if (retailPrice) {
+      this.productTagForm.get('retailPrice')?.setValue(retailPrice.toFixed(2));
+    }
+
     // handle expireDate separately
     this.productTagForm
       .get('expireDate')
@@ -276,6 +291,7 @@ export class ProductTag {
 export interface PriceTagPrintProjection {
   articleNo: string;
   barcode: string;
+  retailPrice?: string | number | null;
   shelfNo: string;
   masterId: number | string;
   version: number | string;
