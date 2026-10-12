@@ -274,7 +274,7 @@ export class ProductTag {
     });
 
     const retailPrice = this.phraseResult?.retailPrice;
-    if (retailPrice) {
+    if (retailPrice != null) {
       this.productTagForm.get('retailPrice')?.setValue(retailPrice.toFixed(2));
     }
 
@@ -365,7 +365,7 @@ export interface ScanValidateModel {
   articleNo?: string;
   barcode?: string;
   unit?: string;
-  retailPrice?: number;
+  retailPrice?: number | null;
   shelfNo?: string | null;
   masterId?: string;
   version?: string;
@@ -414,7 +414,7 @@ export class BarcodeScanValidateManager {
         articleNo: result?.[QrCodeDescription.ARTICLE_NO] || "",
         barcode: result?.[QrCodeDescription.BARCODE] || "",
         unit: result?.[QrCodeDescription.UNIT] || "",
-        retailPrice: this.parseRetailPrice(result?.[QrCodeDescription.RETAIL_PRICE] || ""),
+        retailPrice: this.parseRetailPrice(result?.[QrCodeDescription.RETAIL_PRICE]),
         shelfNo: result?.[QrCodeDescription.SHELF_NO] || null,
         masterId: result?.[QrCodeDescription.MASTER_ID] || "",
         version: result?.[QrCodeDescription.VERSION] || "",
@@ -478,8 +478,9 @@ export class BarcodeScanValidateManager {
     }
   }
 
-  private parseRetailPrice(rspText: string): number {
-    if (!rspText || rspText.length === 0) return 0.0;
+  /** null when field 06 is missing (old Regular tags) or empty, so it is not mistaken for 0.00. */
+  private parseRetailPrice(rspText?: string): number | null {
+    if (!rspText) return null;
     // normally satang without a dot ("1000" = 10.00); some tags have Double.toString ("14.0")
     const withDecimal = rspText.includes(".") ? rspText : rspText.slice(0, -2) + "." + rspText.slice(-2);
     return parseFloat(parseFloat(withDecimal).toFixed(2));
