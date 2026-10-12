@@ -41,9 +41,9 @@ export class ProductTag {
     const now = new Date()
     this.productTagForm = this.fb.group({
       type: [null, Validators.required],
-      articleNo: ['', Validators.required],
+      articleNo: [''],
       barcode: ['', Validators.required],
-      retailPrice: ['', Validators.pattern(/^\d+(\.\d{1,2})?$/)],
+      retailPrice: ['', Validators.required],
       shelfNo: [''],
       masterId: ['', Validators.required],
       version: ['', Validators.required],
@@ -51,12 +51,13 @@ export class ProductTag {
       bayLevel: [''],
       locationId: [''],
       docRefNo: [''],
+      effectiveDate: [''],
       expireDate: [''],
       productTagData: [''],
     })
 
     this.productTagForm.get('type')?.valueChanges.subscribe(type => {
-      const articleNoControl = this.productTagForm.get('articleNo');
+      const retailPriceControl = this.productTagForm.get('retailPrice');
       const barcodeControl = this.productTagForm.get('barcode');
       const masterIdControl = this.productTagForm.get('masterId');
       const versionControl = this.productTagForm.get('version');
@@ -65,7 +66,7 @@ export class ProductTag {
       const shelfControl = this.productTagForm.get('shelfNo');
 
       if (type === 'REGULAR') {
-        articleNoControl?.setValidators([Validators.required]);
+        retailPriceControl?.setValidators([Validators.required, Validators.pattern(/^\d+(\.\d{1,2})?$/)]);
         barcodeControl?.setValidators([Validators.required]);
         masterIdControl?.setValidators([Validators.required]);
         versionControl?.setValidators([Validators.required]);
@@ -78,7 +79,7 @@ export class ProductTag {
         docRefNoControl?.setValidators([Validators.required]);
         shelfControl?.setValidators([Validators.required]);
 
-        articleNoControl?.clearValidators();
+        retailPriceControl?.clearValidators();
         masterIdControl?.clearValidators();
         versionControl?.clearValidators();
         expireDateControl?.clearValidators();
@@ -86,7 +87,7 @@ export class ProductTag {
         docRefNoControl?.setValidators([Validators.required]);
         expireDateControl?.setValidators([Validators.required]);
 
-        articleNoControl?.clearValidators();
+        retailPriceControl?.clearValidators();
         barcodeControl?.clearValidators();
         shelfControl?.clearValidators();
         masterIdControl?.clearValidators();
@@ -99,7 +100,7 @@ export class ProductTag {
         qrDiv.innerHTML = ""
       }
 
-      articleNoControl?.updateValueAndValidity();
+      retailPriceControl?.updateValueAndValidity();
       barcodeControl?.updateValueAndValidity();
       shelfControl?.updateValueAndValidity();
       masterIdControl?.updateValueAndValidity();
@@ -109,10 +110,10 @@ export class ProductTag {
     })
   }
 
+  /** Like PriceTagMapper.appendText (pos-service): a null value is still written, as length 00. */
   appendText(sb: string[], fieldNo: QrCodeDescription, value: string | undefined | null) {
-    if (value != null) {
-      sb.push(`${fieldNo}${String(value).length.toString().padStart(2, "0")}${value}`);
-    }
+    const text = value == null ? "" : String(value);
+    sb.push(`${fieldNo}${text.length.toString().padStart(2, "0")}${text}`);
   }
 
   buildBayInfo(
@@ -120,19 +121,24 @@ export class ProductTag {
     bayLevel?: string | null,
     locationId?: string | null
   ): string | null {
-    if (!bayNo || !bayLevel || locationId == null) {
+    if (!bayNo || !bayLevel || !locationId) {
       return null;
     }
     return `${bayNo},${bayLevel},${locationId}`;
   }
 
+  // Field order follows real POS tags (retail price + effective date right after the barcode);
+  // POS writes no Article No, so it is only written when typed in.
   generateRegularTag(data: PriceTagPrintProjection): string {
     const sb: string[] = [];
 
     this.appendText(sb, QrCodeDescription.PRODUCT_TAG_TYPE, "01");
-    this.appendText(sb, QrCodeDescription.ARTICLE_NO, data.articleNo);
+    if (data.articleNo?.trim()) {
+      this.appendText(sb, QrCodeDescription.ARTICLE_NO, data.articleNo.trim());
+    }
     this.appendText(sb, QrCodeDescription.BARCODE, data.barcode);
     this.appendText(sb, QrCodeDescription.RETAIL_PRICE, this.formatRetailPrice(data.retailPrice));
+    this.appendText(sb, QrCodeDescription.EFFECTIVE_DATE, this.toEffectiveDate(data.effectiveDate));
     this.appendText(sb, QrCodeDescription.SHELF_NO, data.shelfNo);
     this.appendText(sb, QrCodeDescription.MASTER_ID, data.masterId.toString());
     this.appendText(sb, QrCodeDescription.VERSION, data.version.toString());
@@ -141,7 +147,7 @@ export class ProductTag {
     return sb.join("");
   }
 
-  /** 59.5 → "5950" (last 2 digits are satang, see parseRetailPrice); blank → field omitted. */
+  /** In satang without a dot, like PriceTagMapper.appendCurrency: 10 → "1000", 59.5 → "5950". */
   formatRetailPrice(price?: string | number | null): string | null {
     if (price == null || String(price).trim() === '') {
       return null;
@@ -222,6 +228,19 @@ export class ProductTag {
     return `${dayPart}${monthPart}${yearPart}${hour}${minute}${second}`;
   }
 
+  /** Date input "2025-01-20" → "250120" (YYMMDD); blank → field omitted from the QR. */
+  toEffectiveDate(input?: string | null): string | null {
+    const match = input?.match(/^\d{2}(\d{2})-(\d{2})-(\d{2})$/);
+    return match ? `${match[1]}${match[2]}${match[3]}` : null;
+  }
+
+  /** "250120" (YYMMDD) → "2025-01-20" for the date input. */
+  fromEffectiveDate(value?: string): string | null {
+    return value && /^\d{6}$/.test(value)
+      ? `20${value.substring(0, 2)}-${value.substring(2, 4)}-${value.substring(4, 6)}`
+      : null;
+  }
+
   phraseProductTag() {
     const formData = this.productTagForm.value;
     const manager = new BarcodeScanValidateManager();
@@ -259,7 +278,10 @@ export class ProductTag {
       this.productTagForm.get('retailPrice')?.setValue(retailPrice.toFixed(2));
     }
 
-    // handle expireDate separately
+    // handle dates separately
+    this.productTagForm
+      .get('effectiveDate')
+      ?.setValue(this.fromEffectiveDate(this.phraseResult?.effectiveDate));
     this.productTagForm
       .get('expireDate')
       ?.setValue(this.convertExpireDate(this.phraseResult?.expireDate));
@@ -299,6 +321,7 @@ export interface PriceTagPrintProjection {
   bayLevel?: string;
   locationId?: string;
   docRefNo?: string;
+  effectiveDate?: string;
   expireDate: string;
 }
 
@@ -349,6 +372,7 @@ export interface ScanValidateModel {
   shelfLabel?: string;
   promotionNo?: string;
   rtcUniqueCode?: string;
+  effectiveDate?: string;
   expireDate?: string;
   bayNo?: string;
   bayLevel?: string;
@@ -394,6 +418,7 @@ export class BarcodeScanValidateManager {
         shelfNo: result?.[QrCodeDescription.SHELF_NO] || null,
         masterId: result?.[QrCodeDescription.MASTER_ID] || "",
         version: result?.[QrCodeDescription.VERSION] || "",
+        effectiveDate: result?.[QrCodeDescription.EFFECTIVE_DATE] || "",
         shelfLabel: result?.[QrCodeDescription.SHELF_LABEL] || "",
         bayNo: bayNo || "",
         bayLevel: bayLevel || "",
@@ -455,7 +480,8 @@ export class BarcodeScanValidateManager {
 
   private parseRetailPrice(rspText: string): number {
     if (!rspText || rspText.length === 0) return 0.0;
-    const withDecimal = rspText.slice(0, -2) + "." + rspText.slice(-2);
+    // normally satang without a dot ("1000" = 10.00); some tags have Double.toString ("14.0")
+    const withDecimal = rspText.includes(".") ? rspText : rspText.slice(0, -2) + "." + rspText.slice(-2);
     return parseFloat(parseFloat(withDecimal).toFixed(2));
   }
 }
