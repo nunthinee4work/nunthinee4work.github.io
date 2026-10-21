@@ -2511,6 +2511,52 @@ $tc-added-word: rgba(22, 163, 74, 0.3);
   color: var(--c-muted);
 }
 
+.ir-saved {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--c-success);
+  background: var(--c-success-soft);
+
+  &.bigger {
+    color: var(--c-danger);
+    background: var(--c-danger-soft);
+  }
+}
+
+.ir-compress-note {
+  font-size: 11.5px;
+  color: var(--c-muted);
+}
+
+.ir-over,
+.ir-compress-note.ir-over {
+  color: var(--c-danger);
+}
+
+.ir-max-kb {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-text-soft);
+}
+
+.ir-max-kb-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  input {
+    width: 110px;
+  }
+}
+
 .ir-own-size {
   display: flex;
   align-items: center;

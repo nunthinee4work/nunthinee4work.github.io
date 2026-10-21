@@ -148,7 +148,7 @@ export class App {
         { id: 'timeConverter', label: 'Time Toolkit', icon: 'fa-clock' },
         // Moved into Time Toolkit as a tab (old links redirect via TAB_ALIASES):
         // { id: 'cronSchedule', label: 'Cron Schedule', icon: 'fa-calendar-check' },
-        { id: 'imageResizer', label: 'Image Resizer', icon: 'fa-image' },
+        { id: 'imageResizer', label: 'Image Resize & Compress', icon: 'fa-image' },
         { id: 'pdfConverter', label: 'PDF Converter', icon: 'fa-file-pdf' },
         { id: 'calculator', label: 'Calculator', icon: 'fa-calculator' },
         // { id: 'vatCalculator', label: 'VAT Calculator', icon: 'fa-percent' }, // tab in Calculator

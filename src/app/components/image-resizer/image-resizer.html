@@ -1,5 +1,5 @@
 <div class="image-resizer">
-  <h1>Image Resizer &amp; Converter</h1>
+  <h1>Image Resizer, Compressor &amp; Converter</h1>
 
   <div class="ir-layout">
     <div class="ir-main">
@@ -28,9 +28,17 @@
               <div class="ir-bytes">
                 {{ formatBytes(item.file.size) }}
                 @if (item.result) {
-                  <i class="fa-solid fa-arrow-right"></i> {{ formatBytes(item.result.blob.size) }}
+                  <i class="fa-solid fa-arrow-right"></i>
+                  <span [class.ir-over]="item.result.overLimit">{{ formatBytes(item.result.blob.size) }}</span>
+                  @let saved = savedPercent(item);
+                  @if (saved !== null && saved !== 0) {
+                    <span class="ir-saved" [class.bigger]="saved > 0">{{ saved > 0 ? '+' : '' }}{{ saved }}%</span>
+                  }
                 }
               </div>
+              @if (item.result?.note; as note) {
+                <div class="ir-compress-note" [class.ir-over]="item.result?.overLimit">{{ note }}</div>
+              }
               @if (item.error) {
                 <div class="ir-error">{{ item.error }}</div>
               }
@@ -82,14 +90,37 @@
         }
       </div>
       @if (usesQuality) {
-        <label class="ir-quality">Quality (JPG) <b>{{ form.value.quality }}%</b>
+        <label class="ir-quality">{{ maxBytes ? 'Quality สูงสุด (JPG)' : 'Quality (JPG)' }} <b>{{ form.value.quality }}%</b>
           <input type="range" min="10" max="100" step="1" formControlName="quality">
         </label>
+      }
+
+      <h3>Compress <small class="ir-scope">ลดขนาดไฟล์</small></h3>
+      <label class="ir-max-kb">ขนาดไฟล์ไม่เกิน
+        <span class="ir-max-kb-input">
+          <input type="number" min="0.01" step="any" formControlName="maxSize" placeholder="ไม่จำกัด">
+          <select class="ec-select" formControlName="maxUnit" aria-label="หน่วย">
+            @for (unit of sizeUnits; track unit) {
+              <option [value]="unit">{{ unit }}</option>
+            }
+          </select>
+        </span>
+      </label>
+      <div class="ir-formats">
+        <button type="button" class="wc-chip" [class.active]="!maxBytes" (click)="setMaxSize(null)">ไม่จำกัด</button>
+        @for (preset of maxSizePresets; track preset) {
+          <button type="button" class="wc-chip" [class.active]="isMaxSize(preset)" (click)="setMaxSize(preset.size, preset.unit)">{{ preset.size }} {{ preset.unit }}</button>
+        }
+      </div>
+      @if (maxBytes) {
+        <p class="ir-hint mt-0">
+          JPG: ลด quality ก่อน (ไม่ต่ำกว่า 40%) ยังเกินค่อยย่อขนาดภาพ · PNG / GIF ลดได้ด้วยการย่อขนาดภาพเท่านั้น — อยากได้ไฟล์เล็กสุดเลือก Convert to JPG
+        </p>
       }
       <p class="ir-hint">PNG / GIF / SVG เก็บพื้นใสได้ — JPG ไม่มีพื้นใส จะเติมพื้นขาวให้ · GIF สูงสุด 256 สี (GIF เคลื่อนไหวได้แค่เฟรมแรก) · รูปเป็น SVG = ฝังภาพไว้ใน SVG ไม่ใช่ vector, SVG เป็น SVG ยังเป็น vector</p>
 
       <button type="button" class="btn btn-primary w-100" (click)="resizeAll()" [disabled]="busy" data-primary-action>
-        {{ busy ? 'Converting…' : 'Resize / Convert' + (items.length > 1 ? ' ' + items.length + ' images' : '') }}
+        {{ busy ? 'Converting…' : (maxBytes ? 'Resize / Compress' : 'Resize / Convert') + (items.length > 1 ? ' ' + items.length + ' images' : '') }}
       </button>
       @if (hasResults && items.length > 1) {
         <button type="button" class="btn btn-outline-primary w-100 mt-2" (click)="downloadAll()">
@@ -120,6 +151,9 @@
 
         <div class="ir-preview-stats">
           <b>{{ formatLabel(result.blob.type) }} {{ result.size.width }}×{{ result.size.height }}</b> · {{ formatBytes(result.blob.size) }}
+          @if (result.note) {
+            · <span [class.ir-over]="result.overLimit">{{ result.note }}</span>
+          }
         </div>
 
         <div class="ir-preview-view" [class.actual]="actualPixels">

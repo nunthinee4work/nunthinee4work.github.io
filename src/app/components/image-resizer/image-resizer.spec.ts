@@ -50,6 +50,38 @@ describe('ImageResizer', () => {
     expect(el.querySelector('.ir-size')?.textContent).toContain('JPG 100×50');
   });
 
+  it('should compress a JPG under the file-size limit', async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 400;
+    const context = canvas.getContext('2d')!;
+    for (let i = 0; i < 4000; i++) {
+      context.fillStyle = `hsl(${i * 37 % 360} 80% ${30 + i % 50}%)`;
+      context.fillRect((i * 53) % 400, (i * 97) % 400, 7, 7);
+    }
+    const file = await new Promise<File>(resolve =>
+      canvas.toBlob(blob => resolve(new File([blob!], 'noise.png', { type: 'image/png' })), 'image/png'));
+    await component.addFiles([file]);
+    component.setFormat('image/jpeg');
+    component.setMaxSize(20, 'KB');
+    await component.resizeAll();
+    fixture.detectChanges();
+
+    const result = component.items[0].result!;
+    expect(result.blob.type).toBe('image/jpeg');
+    expect(result.blob.size).toBeLessThanOrEqual(20 * 1024);
+    expect(result.overLimit).toBeFalsy();
+    expect(el.querySelector('.ir-saved')).not.toBeNull();
+  });
+
+  it('should keep the original file when it is already under the limit', async () => {
+    const file = await makeImage(30, 20);
+    await component.addFiles([file]);
+    component.setMaxSize(0.5, 'MB');
+    expect(component.maxBytes).toBe(512 * 1024);
+    await component.resizeAll();
+    expect(component.items[0].result!.blob.size).toBeLessThanOrEqual(file.size);
+  });
+
   it('should keep the size when only converting', async () => {
     await component.addFiles([await makeImage(30, 20)]);
     await component.resizeAll();

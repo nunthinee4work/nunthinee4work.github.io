@@ -6,11 +6,17 @@ import { ToastrService } from 'ngx-toastr';
 import { FileUtils } from '../../utils/file.utils';
 import { ImageResizeUtils, ImageSize } from '../../utils/image-resize.utils';
 
+type SizeUnit = 'KB' | 'MB';
+
 interface ResizedImage {
   blob: Blob;
   url: string;
   size: ImageSize;
   name: string;
+  /** What the file-size limit did (lower quality / smaller pixels / original kept) */
+  note?: string;
+  /** Still above the file-size limit */
+  overLimit?: boolean;
 }
 
 interface ImageItem {
@@ -29,8 +35,9 @@ interface ImageItem {
 }
 
 /**
- * iloveimg.com-style "Resize image by pixels" + format conversion: pick / drop / paste images, set width /
- * height and output format (JPG / PNG / WEBP), convert in the browser (canvas) and download. Images never leave the page and are not persisted.
+ * iloveimg.com-style "Resize image by pixels" + format conversion + compress: pick / drop / paste images, set width /
+ * height, output format (JPG / PNG / GIF / SVG) and an optional max file size, convert in the browser (canvas) and
+ * download. Images never leave the page and are not persisted.
  */
 @Component({
   selector: 'app-image-resizer',
@@ -52,7 +59,19 @@ export class ImageResizer {
     format: [''],
     /** JPG quality, 10–100 */
     quality: [92],
+    /** Compress: keep each file at most `maxSize` `maxUnit`; blank = no limit */
+    maxSize: [null as number | null],
+    maxUnit: ['KB' as SizeUnit],
   });
+
+  readonly sizeUnits: SizeUnit[] = ['KB', 'MB'];
+  readonly maxSizePresets: Array<{ size: number; unit: SizeUnit }> = [
+    { size: 100, unit: 'KB' },
+    { size: 200, unit: 'KB' },
+    { size: 500, unit: 'KB' },
+    { size: 1, unit: 'MB' },
+    { size: 2, unit: 'MB' },
+  ];
 
   readonly formats = [
     { value: '', label: 'Original' },
@@ -164,6 +183,28 @@ export class ImageResizer {
   get usesQuality() {
     const format = this.form.getRawValue().format;
     return format ? format === 'image/jpeg' : this.items.some(item => this.outputType(item) === 'image/jpeg');
+  }
+
+  /** Bytes allowed per file, or null when no limit is set */
+  get maxBytes(): number | null {
+    const { maxSize, maxUnit } = this.form.getRawValue();
+    const value = Number(maxSize);
+    return value > 0 ? Math.round(value * (maxUnit === 'MB' ? 1024 * 1024 : 1024)) : null;
+  }
+
+  setMaxSize(size: number | null, unit?: SizeUnit) {
+    this.form.patchValue(unit ? { maxSize: size, maxUnit: unit } : { maxSize: size });
+  }
+
+  isMaxSize(preset: { size: number; unit: SizeUnit }) {
+    const { maxSize, maxUnit } = this.form.getRawValue();
+    return Number(maxSize) === preset.size && maxUnit === preset.unit;
+  }
+
+  /** Smaller (negative) / bigger share of the original file, e.g. -63 */
+  savedPercent(item: ImageItem): number | null {
+    if (!item.result || !item.file.size) return null;
+    return Math.round((item.result.blob.size / item.file.size - 1) * 100);
   }
 
   setFormat(value: string) {
@@ -301,17 +342,40 @@ export class ImageResizer {
   }
 
   private async convert(item: ImageItem) {
-    const size = this.targetSize(item);
+    let size = this.targetSize(item);
     const type = this.outputType(item);
-    const { quality } = this.form.getRawValue();
+    const quality = Math.min(100, Math.max(10, Number(this.form.getRawValue().quality) || 92)) / 100;
+    const maxBytes = this.maxBytes;
+    const vector = item.file.type === ImageResizeUtils.SVG && type === ImageResizeUtils.SVG;
     try {
-      const blob = item.file.type === ImageResizeUtils.SVG && type === ImageResizeUtils.SVG
-        ? await ImageResizeUtils.resizeSvg(item.file, item.size, size, !this.keepsRatio(item))
-        : await ImageResizeUtils.resize(item.bitmap, size, type, Math.min(100, Math.max(10, Number(quality) || 92)) / 100);
+      let blob: Blob;
+      let note: string | undefined;
+      let overLimit = false;
+      if (vector) {
+        blob = await ImageResizeUtils.resizeSvg(item.file, item.size, size, !this.keepsRatio(item));
+        if (maxBytes && blob.size > maxBytes) [note, overLimit] = ['SVG แบบ vector ลดขนาดไฟล์ไม่ได้', true];
+      } else if (maxBytes) {
+        const wanted = size;
+        const compressed = await ImageResizeUtils.compressToSize(
+          (s, q) => ImageResizeUtils.resize(item.bitmap, s, type, q), size, maxBytes, quality, type === 'image/jpeg');
+        ({ blob, size } = compressed);
+        overLimit = !compressed.fits;
+        const notes = [];
+        if (compressed.quality < quality) notes.push(`quality ${Math.round(compressed.quality * 100)}%`);
+        if (size.width !== wanted.width || size.height !== wanted.height) notes.push(`ย่อเหลือ ${size.width}×${size.height}`);
+        note = overLimit ? `ยังเกิน ${this.formatBytes(maxBytes)}` : notes.length ? `${notes.join(' · ')} — ให้ไม่เกิน ${this.formatBytes(maxBytes)}` : undefined;
+        // Re-encoding an image that is already small enough can make it bigger: keep the original then
+        const unchanged = type === item.file.type && size.width === item.size.width && size.height === item.size.height;
+        if (unchanged && item.file.size <= maxBytes && item.file.size <= blob.size) {
+          [blob, note, overLimit] = [item.file, 'ไฟล์เดิมเล็กกว่าอยู่แล้ว ใช้ไฟล์เดิม', false];
+        }
+      } else {
+        blob = await ImageResizeUtils.resize(item.bitmap, size, type, quality);
+      }
       // toBlob falls back to PNG for a type the browser can't encode: name the file after what we got
       const name = ImageResizeUtils.outputName(item.file.name, size, blob.type || type);
       if (item.result) URL.revokeObjectURL(item.result.url);
-      item.result = { blob, url: URL.createObjectURL(blob), size, name };
+      item.result = { blob, url: URL.createObjectURL(blob), size, name, note, overLimit };
       item.error = blob.type && blob.type !== type ? `Browser นี้แปลงเป็น ${this.formatLabel(type)} ไม่ได้ ได้ ${this.formatLabel(blob.type)} แทน` : undefined;
     } catch {
       item.error = 'แปลงไฟล์ไม่สำเร็จ';

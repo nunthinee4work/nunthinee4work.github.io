@@ -16,7 +16,23 @@ export interface ResizeOptions {
   noEnlarge: boolean;
 }
 
+/** Encodes the image at `size` with `quality` (0–1, ignored by lossless formats) */
+export type ImageEncoder = (size: ImageSize, quality: number) => Promise<Blob>;
+
+export interface CompressResult {
+  blob: Blob;
+  size: ImageSize;
+  /** Quality actually used (lossy output only) */
+  quality: number;
+  /** false = still above the limit at the smallest size we try */
+  fits: boolean;
+}
+
 export class ImageResizeUtils {
+  /** Lowest JPG quality the file-size limit may go down to before it starts shrinking the image */
+  static readonly MIN_QUALITY = 0.4;
+  /** Never shrink below this long side while chasing a file-size limit */
+  static readonly MIN_SIDE = 16;
   /**
    * Types we can write: canvas encodes JPEG / PNG, GIF goes through `gifenc`, SVG is written here.
    * Anything else (webp, bmp, avif…) is saved as PNG when "Original" is chosen.
@@ -129,6 +145,65 @@ export class ImageResizeUtils {
       canvas.toBlob(result => (result ? resolve(result) : reject(new Error('Encode failed'))),
         type === ImageResizeUtils.SVG ? 'image/png' : type, quality));
     return type === ImageResizeUtils.SVG ? ImageResizeUtils.embedInSvg(blob, size) : blob;
+  }
+
+  /**
+   * Smallest change that gets the file under `maxBytes` (TinyJPG / iloveimg "compress to size"):
+   * 1. `maxQuality` already fits → done.
+   * 2. lossy: binary-search the highest quality between MIN_QUALITY and `maxQuality` that fits.
+   * 3. still too big (or lossless): shrink the pixels, re-estimating the scale from the byte ratio
+   *    (bytes grow roughly with area), until it fits or the long side reaches MIN_SIDE — then a lossy
+   *    image searches the quality again at that size, so the room left under the limit isn't wasted.
+   */
+  static async compressToSize(encode: ImageEncoder, size: ImageSize, maxBytes: number, maxQuality: number, lossy: boolean): Promise<CompressResult> {
+    let blob = await encode(size, maxQuality);
+    if (blob.size <= maxBytes) return { blob, size, quality: maxQuality, fits: true };
+
+    const searchQuality = lossy && maxQuality > ImageResizeUtils.MIN_QUALITY;
+    if (searchQuality) {
+      const found = await ImageResizeUtils.bestQuality(encode, size, maxBytes, maxQuality);
+      if (found) return { ...found, size, fits: true };
+    }
+
+    const quality = searchQuality ? ImageResizeUtils.MIN_QUALITY : maxQuality;
+    if (searchQuality) blob = await encode(size, quality);
+    let current = size;
+    for (let i = 0; i < 12; i++) {
+      const longSide = Math.max(current.width, current.height);
+      if (longSide <= ImageResizeUtils.MIN_SIDE) break;
+      const scale = Math.max(
+        Math.min(Math.sqrt(maxBytes / blob.size) * 0.95, 0.9),
+        ImageResizeUtils.MIN_SIDE / longSide,
+      );
+      current = {
+        width: Math.max(1, Math.round(current.width * scale)),
+        height: Math.max(1, Math.round(current.height * scale)),
+      };
+      blob = await encode(current, quality);
+      if (blob.size <= maxBytes) {
+        const better = searchQuality ? await ImageResizeUtils.bestQuality(encode, current, maxBytes, maxQuality) : null;
+        return { ...(better ?? { blob, quality }), size: current, fits: true };
+      }
+    }
+    return { blob, size: current, quality, fits: false };
+  }
+
+  /** Highest quality in MIN_QUALITY…`maxQuality` (exclusive of the max, already tried) that fits, or null */
+  private static async bestQuality(encode: ImageEncoder, size: ImageSize, maxBytes: number, maxQuality: number) {
+    let low = ImageResizeUtils.MIN_QUALITY;
+    let high = maxQuality;
+    let best: { blob: Blob; quality: number } | null = null;
+    for (let i = 0; i < 6 && high - low > 0.01; i++) {
+      const quality = (low + high) / 2;
+      const blob = await encode(size, quality);
+      if (blob.size <= maxBytes) {
+        best = { blob, quality: Math.round(quality * 100) / 100 };
+        low = quality;
+      } else {
+        high = quality;
+      }
+    }
+    return best;
   }
 
   /** 256-colour GIF; fully transparent pixels stay transparent */
